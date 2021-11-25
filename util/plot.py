@@ -19,7 +19,7 @@ def show_funcs(y_history_all, xy_data, func_y_analytical, x_bounds, k_bounds):
     plt.xlabel("x")
     plt.ylabel("y(x)")
 
-    show_kvaried_plot(x, k_bounds, func_y_analytical)
+    show_kvaried_plot(func_y_analytical, x, k_bounds)
     colors = plt.cm.viridis(np.linspace(0, 1, len(y_history_all)))
     for i, y_actual in enumerate(y_history_all):
         plt.plot(x, y_actual, color=colors[i], label=f"epoch {i}")
@@ -34,9 +34,9 @@ def show_funcs(y_history_all, xy_data, func_y_analytical, x_bounds, k_bounds):
 def show_func(func_y, func_y_analytical, W, x_bounds, k_bounds):
     x = np.arange(*x_bounds, 0.05)
 
-    show_kvaried_plot(x, k_bounds, func_y_analytical, "$k \\in [" + f"{k_bounds[0]}, {k_bounds[1]}]$")
+    show_kvaried_plot(func_y_analytical, x, k_bounds, "$k \\in [" + f"{k_bounds[0]}, {k_bounds[1]}]$")
     plt.plot(x, func_y_analytical(x, 1), "--", color="tab:blue", label=f"$k = {1}$")
-    plt.plot(x, get_func(func_y, W, *x_bounds), color="tab:orange", label="model")
+    plt.plot(x, get_func(func_y, W, x_bounds), color="tab:orange", label="model")
     plt.legend(
         *([ x[i] for i in [2, 0, 1] ] for x in plt.gca().get_legend_handles_labels()),
         handletextpad=0.75, loc='best')
