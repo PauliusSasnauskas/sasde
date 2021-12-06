@@ -1,5 +1,6 @@
-from jax import random
+from jax import random, config
 import jax.numpy as np
+config.update('jax_platform_name', 'cpu') # for now
 
 _random_key = random.PRNGKey(712)
 def _get_random_key():
