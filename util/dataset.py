@@ -9,11 +9,8 @@ def _get_random_key():
     return _random_key
 
 def batch_dataset(dataset, size=16):
-    batch_count = len(dataset) // size
-    batches = []
-    for i in range(batch_count):
-        batches += [dataset[i*size : (i+1)*size]]
-    return batches
+    batch_count = dataset.shape[0] // size
+    return np.split(dataset, batch_count)
 
 def take_random(dataset):
     return random.choice(_get_random_key(), dataset)
