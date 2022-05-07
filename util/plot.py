@@ -1,45 +1,78 @@
 import matplotlib.pyplot as plt
 import jax.numpy as np
+from util.print import pad
+from util.dotdict import DotDict
 
-def show_kvaried_plot(func, x, k_bounds, label="expected"):
-    k_range = np.arange(*k_bounds, 0.01)
-    y_all = np.array([func(x, k_i) for k_i in k_range])
+class Plotting:
+    def __init__(self, actual_func, network, x_bounds, c2_bounds):
+        self.actual_func = actual_func
+        self.network = network
+        self.x_bounds = x_bounds
+        self.c2_bounds = c2_bounds
+        self.funcs = []
 
-    y_low = y_all.min(axis=0)
-    y_up = y_all.max(axis=0)
+    def init(self, W):
+        self.funcs += [self.get_func(W)]
 
-    plt.fill_between(x, y_low, y_up, alpha=0.2, color="gray", label=label)
+    def after_epoch(self, W, epoch, loss_epoch):
+        self.funcs += [self.get_func(W)]
+        self.show_funcs(epoch, loss_epoch)
 
-def get_func(func, W, x_bounds):
-    return func(W, np.arange(*x_bounds, 0.05))
+    def show_funcs(self, epoch, loss_epoch, xy_data=None, all=True):
+        x = np.arange(*self.x_bounds, 0.05)
 
-def show_funcs(y_history_all, xy_data, func_y_analytical, x_bounds, k_bounds):
-    x = np.arange(*x_bounds, 0.05)
+        plt.xlabel("x")
+        plt.ylabel("y(x)")
 
-    plt.xlabel("x")
-    plt.ylabel("y(x)")
+        count = len(self.funcs)
 
-    show_kvaried_plot(func_y_analytical, x, k_bounds)
-    colors = plt.cm.viridis(np.linspace(0, 1, len(y_history_all)))
-    for i, y_actual in enumerate(y_history_all):
-        plt.plot(x, y_actual, color=colors[i], label=f"epoch {i}")
-    
-    plt.scatter(*list(zip(*xy_data)), s=0.2)
+        colors = plt.cm.viridis(np.linspace(0, 1, count))
 
-    if len(y_history_all) < 6:
-        plt.legend(loc=2)
-    plt.title(f"$k \\in [{k_bounds[0]}, {k_bounds[1]}]$")
-    plt.show()
+        if all:
+            for i, y in enumerate(self.funcs):
+                plt.plot(x, y, color=colors[i], label=f"epoch {i}")
+        else:
+            last = self.funcs[-1]
+            plt.plot(x, last, label=r"$y$")
+        
+        if xy_data is not None:
+            plt.scatter(*list(zip(*xy_data))[:2], s=0.2)
+            plt.scatter(*list(zip(*xy_data))[2:], s=0.2)
 
-def show_func(func_y, func_y_analytical, W, x_bounds, k_bounds):
-    x = np.arange(*x_bounds, 0.05)
+        self.show_c2varied_plot(self.actual_func, x, self.c2_bounds)
 
-    show_kvaried_plot(func_y_analytical, x, k_bounds, "$k \\in [" + f"{k_bounds[0]}, {k_bounds[1]}]$")
-    plt.plot(x, func_y_analytical(x, 1), "--", color="tab:blue", label=f"$k = {1}$")
-    plt.plot(x, get_func(func_y, W, x_bounds), color="tab:orange", label="model")
-    plt.legend(
-        *([ x[i] for i in [2, 0, 1] ] for x in plt.gca().get_legend_handles_labels()),
-        handletextpad=0.75, loc='best')
-    plt.gcf().set_dpi(150)
-    plt.title(f"$k \\in [{k_bounds[0]}, {k_bounds[1]}]$")
-    plt.show()
+        if not all or count < 10:
+            plt.legend(loc=2)
+        # plt.suptitle(text)
+        plt.title(f"Epoch {epoch+1}, Loss: {loss_epoch:.3f}")
+        # plt.ylim((0, 5))
+        if not all:
+            plt.savefig(f'imgs/img{pad(count, n=3)}.png', dpi=200)
+        plt.show()
+
+    def get_func(self, W):
+        val = self.network.func_y(W, np.arange(*self.x_bounds, 0.05))
+        return val
+
+    def show_c2varied_plot(self, func, x, c2_bounds, label="expected"):
+        c2_range = np.arange(*c2_bounds, 0.01)
+        y_all = np.array([func(x, 1, c_i) for c_i in c2_range])
+
+        y_low = y_all.min(axis=0)
+        y_up = y_all.max(axis=0)
+
+        plt.fill_between(x, y_low, y_up, alpha=0.2, color="gray", label=label)
+
+
+# def show_func(func_y, func_y_analytical, W, x_bounds, k_bounds):
+#     x = np.arange(*x_bounds, 0.05)
+
+#     show_c2varied_plot(func_y_analytical, x, k_bounds, "$k \\in [" + f"{k_bounds[0]}, {k_bounds[1]}]$")
+#     plt.plot(x, func_y_analytical(x, 1), "--", color="tab:blue", label=f"$k = {1}$")
+#     plt.plot(x, get_func(func_y, W, x_bounds), color="tab:orange", label="model")
+#     plt.legend(
+#         *([ x[i] for i in [2, 0, 1] ] for x in plt.gca().get_legend_handles_labels()),
+#         handletextpad=0.75, loc='best')
+#     plt.gcf().set_dpi(150)
+#     plt.title(f"$k \\in [{k_bounds[0]}, {k_bounds[1]}]$")
+#     plt.show()
