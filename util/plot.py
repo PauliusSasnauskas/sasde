@@ -39,7 +39,7 @@ class Plotting:
             plt.scatter(*list(zip(*xy_data))[:2], s=0.2)
             plt.scatter(*list(zip(*xy_data))[2:], s=0.2)
 
-        self.show_c2varied_plot(self.actual_func, x, self.c2_bounds)
+        # self.show_c2varied_plot(self.actual_func, x, self.c2_bounds)
 
         if not all or count < 10:
             plt.legend(loc=2)
@@ -51,7 +51,16 @@ class Plotting:
         plt.show()
 
     def get_func(self, W):
-        val = self.network.func_y(W, np.arange(*self.x_bounds, 0.05))
+        xrange = np.arange(*self.x_bounds, 0.05)
+        val = self.network.func_y(W, xrange)
+
+        if val.shape != xrange.shape:
+            print('broken')
+            val = np.array([])
+
+            for item in xrange:
+                itemval = self.network.func_y(W, item)
+                val = np.concatenate((val, np.array([itemval])))
         return val
 
     def show_c2varied_plot(self, func, x, c2_bounds, label="expected"):

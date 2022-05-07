@@ -27,7 +27,8 @@ def train(
     key, subkey = random.split(key)
     sampleset = gen_dataset(subkey, network.x_bounds, size=1024)
 
-    info(f"W₀ = {a(W)}")
+    if verbose >= 1:
+        info(f"W₀ = {a(W)}")
 
     plotting.init(W)
 
@@ -56,14 +57,15 @@ def train(
                     W -= lr_2 * grad_2
                     loss_epoch += loss_2
 
-                if verbose >= 1:
+                if verbose >= 2:
                     if lr_2 > 0:
                         print(f"\rΔWₛ = {a(-lr * grad_avg)};\tℒₛ = {loss_avg:.6f};\tΔWₐ = {a(-lr_2 * grad_2)};\tℒₐ = {loss_2:.6f};")
                     else:
                         print(f"\rΔWₛ = {a(-lr * grad_avg)};\tℒₛ = {loss_avg:.6f};")
                     print(f"W  = {a(W)}", end="")
 
-            info(f"Epoch: {epoch+1}, Loss: {loss_epoch},\tW = {a(W)}\n")
+            if verbose >= 1:
+                info(f"Epoch: {epoch+1}, Loss: {loss_epoch},\tW = {a(W)}\n")
 
             loss_history += [loss_epoch]
             plotting.after_epoch(W, epoch, loss_epoch)

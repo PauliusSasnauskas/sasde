@@ -39,9 +39,13 @@ class Link:
 
         keep_index = np.argmax(self.weights)
 
+        weight_sum = np.sum(self.weights)
+
         self.alphas = [self.alphas[keep_index]]
         self.operations = [self.operations[keep_index]]
         self.weights = np.array([self.weights[keep_index]])
+
+        info(f'Shed {weight_sum - self.weights[0]} weight')
 
         self.make_forward()
         self.penalty = 0
@@ -125,7 +129,7 @@ class Network:
 
         return loss_and_grad
 
-    def lambdify2(self, loss_integrated):
+    def lambdify_no_alphas(self, loss_integrated):
         loss_lambdified = sp.lambdify(
             [self.x],
             loss_integrated,
@@ -139,7 +143,8 @@ class Network:
                 "fmax": np.maximum,
                 "log": np.log,
                 "Abs": np.abs,
-                "abs": np.abs},
+                "abs": np.abs
+            },
             cse=True
         )
 
@@ -152,16 +157,23 @@ class Network:
         return loss_and_grad
 
     def __get_integrated_model(self, model_y):
+        model_y_replacement = sp.symbols('y')
+        model_d2y_replacement = sp.symbols('ddy')
         # loss_model = sp.Pow(sp.diff(model_y, self.x, 2) - c1 * (model_y) / (1 + model_y), 2, evaluate=False)
         # loss_integrated = sp.integrate(loss_model, c1s)
-        loss_model = self.loss_model_func(model_y, self.x)
+        loss_model = self.loss_model_func(model_y_replacement, self.x, model_d2y_replacement)
         loss_integrated = sp.integrate(*self.loss_integration_func(loss_model))
         info('Integrated')
+
+        loss_integrated = loss_integrated.subs(model_y_replacement, model_y)
+        loss_integrated = loss_integrated.subs(model_d2y_replacement, sp.diff(model_y, self.x, 2))
+        info('Substituted y\'s with replacements')
 
         loss_integrated += self.penalties # regularization
         self.debug['loss_integrated'] = loss_integrated
 
-        loss_and_grad = self.__lambdify(loss_integrated)
+        loss_and_grad = self.lambdify(loss_integrated)
+        info('Lambdified')
         return loss_and_grad
     
     def __get_secondary_model(self, model_y):
