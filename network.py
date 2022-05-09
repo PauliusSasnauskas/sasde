@@ -63,6 +63,7 @@ class Network:
         self.is_final = False
         
         self.debug = {}
+        self.model_y = None
         self.func_y = None
         self.x_bounds = x_bounds
 
@@ -115,6 +116,8 @@ class Network:
                 "Max": np.maximum,
                 "fmin": np.minimum,
                 "fmax": np.maximum,
+                "min": np.minimum,
+                "max": np.maximum,
                 "log": np.log,
                 "Abs": np.abs,
                 "abs": np.abs},
@@ -203,7 +206,7 @@ class Network:
         symbolic_model = self.__get_symbolic_model()
         self.func_y = sp.lambdify([self.alphas, self.x], symbolic_model)
         # self.func_y = vmap(sp.lambdify([self.alphas, self.x], symbolic_model), (None, 0))
-        self.debug['symbolic_model'] = symbolic_model
+        self.model_y = symbolic_model
         info('Constructed symbolic model')
 
         loss_and_grad = None

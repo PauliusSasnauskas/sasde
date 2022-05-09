@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
 import jax.numpy as np
 from util.print import pad
-from util.dotdict import DotDict
 
 class Plotting:
     def __init__(self, actual_func, network, x_bounds, c2_bounds):

@@ -2,6 +2,7 @@ from jax import random
 import jax.numpy as np
 from util.dataset import shuffle, batch_dataset, gen_dataset
 from util.print import a, d, pad, info
+from util.dotdict import DotDict
 
 def train(
     network,
@@ -13,7 +14,8 @@ def train(
     epochs: int = 10,
     verbose: int = 0,
     batch_size: int = 16,
-    W_init = None
+    W_init = None,
+    best = None
 ):
 
     loss_history = []
@@ -48,6 +50,12 @@ def train(
                 grad_avg = np.average(grad, axis=0)
                 loss_avg = np.average(loss)
 
+                if loss_avg < best.loss:
+                    best.loss = loss_avg
+                    best.model_y = network.model_y
+                    best.alphas = network.alphas
+                    best.W = np.array(W)
+
                 W -= lr * grad_avg
                 loss_epoch += loss_avg
 
@@ -77,4 +85,4 @@ def train(
             break
 
     info(f"W = {a(W)}")
-    return W, loss_history, plotting
+    return DotDict({"W": W, "loss_history": loss_history, "plotting": plotting, "best": best})
