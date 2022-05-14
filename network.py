@@ -25,7 +25,7 @@ class Link:
             for alpha, operation in zip(self.alphas, self.operations)
         ])
         self.forward = lambda input: all_sum.subs(self.x, input)
-    
+
     def make_penalty(self):
         self.penalty = (sum(self.alphas) - 1)**2
 
@@ -49,7 +49,7 @@ class Link:
 
         self.make_forward()
         self.penalty = 0
-    
+
     def is_pruned(self):
         return self.penalty == 0
 
@@ -61,7 +61,7 @@ class Network:
         self.operations = operations
         self.node_count = node_count
         self.is_final = False
-        
+
         self.debug = {}
         self.model_y = None
         self.func_y = None
@@ -159,7 +159,7 @@ class Network:
 
         return loss_and_grad
 
-    def __get_integrated_model(self, model_y):
+    def get_integrated_model_nolambdify(self, model_y):
         model_y_replacement = sp.symbols('y')
         model_d2y_replacement = sp.symbols('ddy')
         # loss_model = sp.Pow(sp.diff(model_y, self.x, 2) - c1 * (model_y) / (1 + model_y), 2, evaluate=False)
@@ -172,13 +172,18 @@ class Network:
         loss_integrated = loss_integrated.subs(model_d2y_replacement, sp.diff(model_y, self.x, 2))
         info('Substituted y\'s with replacements')
 
+        return loss_integrated
+
+    def __get_integrated_model(self, model_y):
+        loss_integrated = self.get_integrated_model_nolambdify(model_y)
+
         loss_integrated += self.penalties # regularization
         self.debug['loss_integrated'] = loss_integrated
 
         loss_and_grad = self.lambdify(loss_integrated)
         info('Lambdified')
         return loss_and_grad
-    
+
     def __get_secondary_model(self, model_y):
         y_actual = sp.symbols("y_actual")
         loss_secondary_model = (y_actual - model_y)**2
@@ -216,7 +221,7 @@ class Network:
             info('Constructed JAXified model')
 
         self.__get_secondary_model(symbolic_model)
-        
+
         return np.array(self.weights), symbolic_model, loss_and_grad, self.is_final
 
     def assign_weights(self, weights):

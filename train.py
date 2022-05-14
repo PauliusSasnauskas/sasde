@@ -76,7 +76,7 @@ def train(
                 info(f"Epoch: {epoch+1}, Loss: {loss_epoch},\tW = {a(W)}\n")
 
             loss_history += [loss_epoch]
-            plotting.after_epoch(W, epoch, loss_epoch)
+            plotting.after_epoch(W, epoch, loss_epoch, show_plot=(epoch == epochs-1))
 
         except KeyboardInterrupt:
             info("Stopping...")

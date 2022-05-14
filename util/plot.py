@@ -13,9 +13,10 @@ class Plotting:
     def init(self, W):
         self.funcs += [self.get_func(W)]
 
-    def after_epoch(self, W, epoch, loss_epoch):
+    def after_epoch(self, W, epoch, loss_epoch, show_plot=True):
         self.funcs += [self.get_func(W)]
-        self.show_funcs(epoch, loss_epoch)
+        if show_plot:
+            self.show_funcs(epoch, loss_epoch)
 
     def show_funcs(self, epoch, loss_epoch, xy_data=None, all=True):
         x = np.arange(*self.x_bounds, 0.05)
@@ -38,7 +39,8 @@ class Plotting:
             plt.scatter(*list(zip(*xy_data))[:2], s=0.2)
             plt.scatter(*list(zip(*xy_data))[2:], s=0.2)
 
-        # self.show_c2varied_plot(self.actual_func, x, self.c2_bounds)
+        if self.actual_func is not None:
+            self.show_c2varied_plot(self.actual_func, x, self.c2_bounds)
 
         if not all or count < 10:
             plt.legend(loc=2)
