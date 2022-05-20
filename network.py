@@ -70,6 +70,20 @@ class Network:
         self.x = sp.symbols('x')
         self.fmax = sp.Function('fmax')
         self.b_weight = np.zeros(1)[0]
+        self.lambdify_modules = {
+            "exp": np.exp,
+            "sin": np.sin,
+            "cos": np.cos,
+            "Min": np.minimum,
+            "Max": np.maximum,
+            "fmin": np.minimum,
+            "fmax": np.maximum,
+            "min": np.minimum,
+            "max": np.maximum,
+            "log": np.log,
+            "Abs": np.abs,
+            "abs": np.abs
+        }
 
         self.links = {}
 
@@ -108,19 +122,7 @@ class Network:
         loss_lambdified = sp.lambdify(
             [self.alphas, self.x],
             loss_integrated,
-            modules={
-                "exp": np.exp,
-                "sin": np.sin,
-                "cos": np.cos,
-                "Min": np.minimum,
-                "Max": np.maximum,
-                "fmin": np.minimum,
-                "fmax": np.maximum,
-                "min": np.minimum,
-                "max": np.maximum,
-                "log": np.log,
-                "Abs": np.abs,
-                "abs": np.abs},
+            modules=self.lambdify_modules,
             cse=True
         )
 
@@ -136,18 +138,7 @@ class Network:
         loss_lambdified = sp.lambdify(
             [self.x],
             loss_integrated,
-            modules={
-                "exp": np.exp,
-                "sin": np.sin,
-                "cos": np.cos,
-                "Min": np.minimum,
-                "Max": np.maximum,
-                "fmin": np.minimum,
-                "fmax": np.maximum,
-                "log": np.log,
-                "Abs": np.abs,
-                "abs": np.abs
-            },
+            modules=self.lambdify_modules,
             cse=True
         )
 
@@ -165,6 +156,9 @@ class Network:
         # loss_model = sp.Pow(sp.diff(model_y, self.x, 2) - c1 * (model_y) / (1 + model_y), 2, evaluate=False)
         # loss_integrated = sp.integrate(loss_model, c1s)
         loss_model = self.loss_model_func(model_y_replacement, self.x, model_d2y_replacement)
+
+
+
         loss_integrated = sp.integrate(*self.loss_integration_func(loss_model))
         info('Integrated')
 
@@ -176,6 +170,15 @@ class Network:
 
     def __get_integrated_model(self, model_y):
         loss_integrated = self.get_integrated_model_nolambdify(model_y)
+
+        # TODO: Keep here or move?
+        model_y_diff = sp.diff(model_y, self.x)
+        model_y_diff_at0 = model_y_diff.subs(self.x, 0)
+        hyperpar = 100.0
+        loss_boundary_cond = hyperpar * model_y_diff_at0**2
+
+        loss_integrated += loss_boundary_cond
+        info('Added boundary condition')
 
         loss_integrated += self.penalties # regularization
         self.debug['loss_integrated'] = loss_integrated
@@ -192,14 +195,7 @@ class Network:
         loss_secondary_lambdified = sp.lambdify(
             [self.alphas, self.x, y_actual],
             loss_secondary_model,
-            modules={
-                "exp": np.exp,
-                "sin": np.sin,
-                "cos": np.cos,
-                "fmin": np.minimum,
-                "fmax": np.maximum,
-                "Abs": np.abs,
-                "abs": np.abs},
+            modules=self.lambdify_modules,
             cse=True
         )
         self.debug['loss_secondary_lambdified'] = loss_secondary_lambdified

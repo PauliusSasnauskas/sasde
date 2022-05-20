@@ -45,7 +45,7 @@ class Plotting:
         if not all or count < 10:
             plt.legend(loc=2)
         # plt.suptitle(text)
-        plt.title(f"Epoch {epoch+1}, Loss: {loss_epoch:.3f}")
+        plt.title(f"Epoch {epoch+1}, Loss: {loss_epoch:.5f}")
         # plt.ylim((0, 5))
         if not all:
             plt.savefig(f'imgs/img{pad(count, n=3)}.png', dpi=200)
@@ -65,8 +65,8 @@ class Plotting:
         return val
 
     def show_c2varied_plot(self, func, x, c2_bounds, label="expected"):
-        c2_range = np.arange(*c2_bounds, 0.01)
-        y_all = np.array([func(x, 1, c_i) for c_i in c2_range])
+        c2_range = np.linspace(*c2_bounds)
+        y_all = np.array([func(x, c_i) for c_i in c2_range])
 
         y_low = y_all.min(axis=0)
         y_up = y_all.max(axis=0)

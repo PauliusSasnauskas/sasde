@@ -37,7 +37,7 @@ def train(
     # train loop
     for epoch in range(epochs): # epochs
         try:
-            loss_epoch = 0
+            loss_epoch = []
 
             key, subkey = random.split(key)
             sampleset = shuffle(subkey, sampleset)
@@ -57,13 +57,14 @@ def train(
                     best.W = np.array(W)
 
                 W -= lr * grad_avg
-                loss_epoch += loss_avg
+                loss_epoch += [loss_avg]
 
                 if lr_2 > 0:
                     loss_2, grad_2 = network.loss_and_grad_secondary(W, *dataset[0])
 
                     W -= lr_2 * grad_2
-                    loss_epoch += loss_2
+                    # loss_epoch += [loss_2]
+                    loss_epoch[-1] = np.array([loss_epoch[-1], loss_2*10000000])
 
                 if verbose >= 2:
                     if lr_2 > 0:
@@ -73,15 +74,15 @@ def train(
                     print(f"W  = {a(W)}", end="")
 
             if verbose >= 1:
-                info(f"Epoch: {epoch+1}, Loss: {loss_epoch},\tW = {a(W)}\n")
+                info(f"Epoch: {epoch+1}, Loss: {np.mean(np.array(loss_epoch))},\tW = {a(W)}\n")
 
             loss_history += [loss_epoch]
-            plotting.after_epoch(W, epoch, loss_epoch, show_plot=(epoch == epochs-1))
+            plotting.after_epoch(W, epoch, np.mean(np.array(loss_epoch)), show_plot=(epoch == epochs-1))
 
         except KeyboardInterrupt:
             info("Stopping...")
-            info(f"Epoch: <{epoch+1}, Loss: {loss_epoch},\tW = {a(W)}")
-            plotting.after_epoch(W, epoch, loss_epoch)
+            info(f"Epoch: <{epoch+1}, Loss: {np.mean(np.array(loss_epoch))},\tW = {a(W)}")
+            plotting.after_epoch(W, epoch, np.mean(np.array(loss_epoch)))
             break
 
     info(f"W = {a(W)}")
