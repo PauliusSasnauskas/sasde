@@ -50,21 +50,24 @@ def train(
                 grad_avg = np.average(grad, axis=0)
                 loss_avg = np.average(loss)
 
-                if loss_avg < best.loss:
-                    best.loss = loss_avg
-                    best.model_y = network.model_y
-                    best.alphas = network.alphas
-                    best.W = np.array(W)
-
                 W -= lr * grad_avg
                 loss_epoch += [loss_avg]
 
+                loss_2_multiplier = 0.1
+                loss_2 = 0
                 if lr_2 > 0:
                     loss_2, grad_2 = network.loss_and_grad_secondary(W, *dataset[0])
 
                     W -= lr_2 * grad_2
-                    # loss_epoch += [loss_2]
-                    loss_epoch[-1] = np.array([loss_epoch[-1], loss_2*10000000])
+                    loss_epoch[-1] = np.array([loss_epoch[-1], loss_2*loss_2_multiplier])
+
+
+                if loss_avg + loss_2*loss_2_multiplier < best.loss:
+                    best.loss = loss_avg + loss_2*loss_2_multiplier
+                    best.model_y = network.model_y
+                    best.alphas = network.alphas
+                    best.W = np.array(W)
+                    info(f'Found new best: {best.loss} on epoch {epoch}')
 
                 if verbose >= 2:
                     if lr_2 > 0:

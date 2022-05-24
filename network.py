@@ -55,12 +55,13 @@ class Link:
 
 
 class Network:
-    def __init__(self, loss_model_func, loss_integration_func, operations, node_count = 4, x_bounds = (0, 1)):
+    def __init__(self, loss_model_func, loss_integration_func, operations, node_count = 4, x_bounds = (0, 1), verbose = 0):
         self.loss_model_func = loss_model_func
         self.loss_integration_func = loss_integration_func
         self.operations = operations
         self.node_count = node_count
         self.is_final = False
+        self.verbose = verbose
 
         self.debug = {}
         self.model_y = None
@@ -160,11 +161,12 @@ class Network:
 
 
         loss_integrated = sp.integrate(*self.loss_integration_func(loss_model))
-        info('Integrated')
+        if self.verbose >= 1:
+            info('Integrated')
 
         loss_integrated = loss_integrated.subs(model_y_replacement, model_y)
         loss_integrated = loss_integrated.subs(model_d2y_replacement, sp.diff(model_y, self.x, 2))
-        info('Substituted y\'s with replacements')
+        # info('Substituted y\'s with replacements')
 
         return loss_integrated
 
@@ -174,17 +176,20 @@ class Network:
         # TODO: Keep here or move?
         model_y_diff = sp.diff(model_y, self.x)
         model_y_diff_at0 = model_y_diff.subs(self.x, 0)
-        hyperpar = 100.0
+        hyperpar = 0.1
         loss_boundary_cond = hyperpar * model_y_diff_at0**2
+        # ENDTODO
 
         loss_integrated += loss_boundary_cond
-        info('Added boundary condition')
+        if self.verbose >= 1:
+            info('Added boundary condition')
 
         loss_integrated += self.penalties # regularization
         self.debug['loss_integrated'] = loss_integrated
 
         loss_and_grad = self.lambdify(loss_integrated)
-        info('Lambdified')
+        if self.verbose >= 1:
+            info('Lambdified')
         return loss_and_grad
 
     def __get_secondary_model(self, model_y):
@@ -208,13 +213,15 @@ class Network:
         self.func_y = sp.lambdify([self.alphas, self.x], symbolic_model)
         # self.func_y = vmap(sp.lambdify([self.alphas, self.x], symbolic_model), (None, 0))
         self.model_y = symbolic_model
-        info('Constructed symbolic model')
+        if self.verbose >= 1:
+            info('Constructed symbolic model')
 
         loss_and_grad = None
 
         if should_integrate:
             loss_and_grad = self.__get_integrated_model(symbolic_model)
-            info('Constructed JAXified model')
+            if self.verbose >= 1:
+                info('Constructed JAXified model')
 
         self.__get_secondary_model(symbolic_model)
 
