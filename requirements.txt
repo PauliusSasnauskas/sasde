@@ -1,1 +1,3 @@
 Sympy >= 1.9
+jax
+matplotlib
