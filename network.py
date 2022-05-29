@@ -192,7 +192,7 @@ class Network:
         # TODO: Keep here or move?
         model_y_diff = sp.diff(model_y, self.x)
         model_y_diff_at0 = model_y_diff.subs(self.x, 0)
-        hyperpar = 0.1
+        hyperpar = 1
         loss_boundary_cond = hyperpar * model_y_diff_at0**2
         # ENDTODO
 
