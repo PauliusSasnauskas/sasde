@@ -56,7 +56,7 @@ class Plotting:
         val = self.network.func_y(W, xrange)
 
         if val.shape != xrange.shape:
-            print('broken')
+            # print('broken')
             val = np.array([])
 
             for item in xrange:

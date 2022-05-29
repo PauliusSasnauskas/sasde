@@ -67,7 +67,8 @@ def train(
                     best.model_y = network.model_y
                     best.alphas = network.alphas
                     best.W = np.array(W)
-                    info(f'Found new best: {best.loss} on epoch {epoch}')
+                    if verbose >= 3:
+                        info(f'Found new best: {best.loss} on epoch {epoch}')
 
                 if verbose >= 2:
                     if lr_2 > 0:

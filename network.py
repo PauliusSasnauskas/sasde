@@ -7,9 +7,10 @@ from util.print import pad, info
 setrecursionlimit(10000)
 
 class Link:
-    def __init__(self, x, operations, fr, to):
+    def __init__(self, x, operations, fr, to, prune_strategy=1):
         self.x = x
         self.operations = operations
+        self.prune_strategy = prune_strategy
 
         # self.alphas = sp.symbols(' '.join(['\\alpha_{' + f'o_{i}' + '}^{' + f'({fr}\,{to})' + '}' for i in range(len(self.operations))]))
         self.alphas = sp.symbols(' '.join([(f'a_o{i}__{pad(fr)}__{pad(to)}') for i in range(len(operations))]))
@@ -26,8 +27,8 @@ class Link:
         ])
         self.forward = lambda input: all_sum.subs(self.x, input)
 
-    def make_penalty(self):
-        self.penalty = (sum(self.alphas) - 1)**2
+    def make_penalty(self, override_sum = 1):
+        self.penalty = (sum(self.alphas) - override_sum)**2
 
     def assign_weights(self, weights):
         self.weights = weights
@@ -37,18 +38,33 @@ class Link:
             print("Link already pruned!")
             return
 
-        keep_index = np.argmax(self.weights)
+        if self.prune_strategy == 0:
+            keep_index = np.argmax(self.weights)
 
-        weight_sum = np.sum(self.weights)
+            weight_sum = np.sum(self.weights)
 
-        self.alphas = [self.alphas[keep_index]]
-        self.operations = [self.operations[keep_index]]
-        self.weights = np.array([self.weights[keep_index]])
+            self.alphas = [self.alphas[keep_index]]
+            self.operations = [self.operations[keep_index]]
+            self.weights = np.array([self.weights[keep_index]])
 
-        info(f'Shed {weight_sum - self.weights[0]} weight')
+            info(f'Shed {weight_sum - self.weights[0]} weight')
 
-        self.make_forward()
-        self.penalty = 0
+            self.make_forward()
+            self.penalty = 0
+        elif self.prune_strategy == 1:
+            remove_index = int(np.argmin(self.weights))
+            info(f'Shed {self.weights[remove_index]} weight')
+
+            self.alphas = self.alphas[:remove_index] + self.alphas[remove_index + 1:]
+            self.operations = self.operations[:remove_index] + self.operations[remove_index+1:]
+            self.weights = np.delete(self.weights, remove_index)
+
+            self.make_forward()
+            self.make_penalty(float(np.sum(self.weights)))
+
+            if len(self.alphas) == 1:
+                self.penalty = 0
+
 
     def is_pruned(self):
         return self.penalty == 0
