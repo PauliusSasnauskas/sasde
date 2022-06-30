@@ -1,7 +1,7 @@
+from sys import setrecursionlimit
 import sympy as sp
 from jax import jit, vmap, value_and_grad
 import jax.numpy as np
-from sys import setrecursionlimit
 from util.print import pad, info
 
 setrecursionlimit(10000)
@@ -129,7 +129,7 @@ class Network:
                 self.penalties += link.penalty
         last_index = self.node_count - 1
 
-        self.penalties += sum([self.fmax(-alpha, 0.0) for alpha in self.alphas])
+        self.penalties += sum([self.fmax(-alpha, 0.0) for alpha in self.alphas]) # pylint: disable=not-callable
         self.alphas += [b]
         self.weights += [self.b_weight]
 
@@ -247,8 +247,8 @@ class Network:
         self.weights = weights
         self.b_weight = weights[len(weights)-1]
         w_fr = 0
-        for fr, start_links in self.links.items():
-            for to, link in start_links.items():
+        for _, start_links in self.links.items():
+            for _, link in start_links.items():
                 w_len = len(link.alphas)
                 link.assign_weights(weights[w_fr : w_fr + w_len])
                 w_fr += w_len
@@ -259,8 +259,8 @@ class Network:
     #     return self.get_model()
 
     def prune_auto(self):
-        for fr, start_links in self.links.items():
-            for to, link in start_links.items():
+        for _, start_links in self.links.items():
+            for _, link in start_links.items():
                 if not link.is_pruned():
                     link.prune()
                     return self.get_model()

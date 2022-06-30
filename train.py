@@ -1,7 +1,7 @@
 from jax import random
 import jax.numpy as np
 from util.dataset import shuffle, batch_dataset, gen_dataset
-from util.print import a, d, pad, info
+from util.print import a, info
 from util.dotdict import DotDict
 
 def train(
@@ -45,7 +45,7 @@ def train(
             key, subkey = random.split(key)
             batches = batch_dataset(sampleset, batch_size)
 
-            for i, batch in enumerate(batches): # minibatches
+            for _, batch in enumerate(batches): # minibatches
                 loss, grad = network.loss_and_grad(W, batch)
                 grad_avg = np.average(grad, axis=0)
                 loss_avg = np.average(loss)
