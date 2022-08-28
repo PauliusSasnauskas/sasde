@@ -56,7 +56,7 @@ class Link:
             info(f'Shed {self.weights[remove_index]} weight')
 
             self.alphas = self.alphas[:remove_index] + self.alphas[remove_index + 1:]
-            self.operations = self.operations[:remove_index] + self.operations[remove_index+1:]
+            self.operations = self.operations[:remove_index] + self.operations[remove_index + 1:]
             self.weights = np.delete(self.weights, remove_index)
 
             self.make_forward()
