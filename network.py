@@ -2,13 +2,14 @@ from sys import setrecursionlimit
 import sympy as sp
 from jax import jit, vmap, value_and_grad
 import jax.numpy as np
+from util.dotdict import DotDict
 from util.print import pad, info
 
 setrecursionlimit(10000)
 
 class Link:
-    def __init__(self, x, operations, fr, to, prune_strategy=1):
-        self.x = x
+    def __init__(self, operations, fr, to, prune_strategy=1):
+        self.input = sp.symbols(f'input_{fr}__{to}')
         self.operations = operations
         self.prune_strategy = prune_strategy
 
@@ -22,10 +23,10 @@ class Link:
 
     def make_forward(self):
         all_sum = sum([
-            alpha * operation(self.x)
+            alpha * operation(self.input)
             for alpha, operation in zip(self.alphas, self.operations)
         ])
-        self.forward = lambda input: all_sum.subs(self.x, input)
+        self.forward = lambda input: all_sum.subs(self.input, input)
 
     def make_penalty(self, override_sum = 1):
         self.penalty = (sum(self.alphas) - override_sum)**2
@@ -71,7 +72,7 @@ class Link:
 
 
 class Network:
-    def __init__(self, loss_model_func, loss_integration_func, operations, node_count = 4, x_bounds = (0, 1), verbose = 0):
+    def __init__(self, loss_model_func, loss_integration_func, names, operations, node_count = 4, verbose = 0):
         self.loss_model_func = loss_model_func
         self.loss_integration_func = loss_integration_func
         self.operations = operations
@@ -82,9 +83,13 @@ class Network:
         self.debug = {}
         self.model_y = None
         self.func_y = None
-        self.x_bounds = x_bounds
 
-        self.x = sp.symbols('x')
+        self.symbols = DotDict()
+        self.symbols[names.eq] = sp.symbols(names.eq)
+        for varname in names.vars:
+            self.symbols[varname] = sp.symbols(varname)
+
+        self.x = sp.symbols('x') # TODO
         self.fmax = sp.Function('fmax')
         self.b_weight = np.zeros(1)[0]
         self.lambdify_modules = {
@@ -107,7 +112,7 @@ class Network:
         for i in range(node_count):
             self.links[i] = {}
             for j in range(i+1, node_count):
-                self.links[i][j] = Link(self.x, operations[::], i, j)
+                self.links[i][j] = Link(operations[::], i, j)
 
     def __get_symbolic_model(self):
         input = self.x

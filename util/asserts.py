@@ -74,7 +74,7 @@ def validateConfig(config):
     isFloatPairList(config.bounds, 'bounds')
     isFunc(config.eq, 'eq')
     isFuncList(config.conds, 'conds')
-    isFuncList(config.basefuncs, 'basefuncs')
+    isFuncList(config.operations, 'operations')
     isDict(config.hyperpars, 'hyperpars')
     isFloat(config.hyperpars.lr, 'hyperpars.lr')
     isInteger(config.hyperpars.cellcount, 'hyperpars.cellcount')

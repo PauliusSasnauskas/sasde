@@ -16,7 +16,7 @@ config.conds = [
   lambda s: s.u.subs(s.y, 0) - a * s.x,
   lambda s: s.u.subs(s.y, 1) - s.x * (s.x + a)
 ]
-config.basefuncs = [
+config.operations = [
   lambda z: 0,
   lambda z: 1,
   lambda z: z,
