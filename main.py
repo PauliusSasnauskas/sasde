@@ -2,8 +2,8 @@ import sympy as sp
 from jax import config as jax_config
 from jax import random
 import jax.numpy as np
+from derivatives import make_derivatives
 from util.asserts import validateConfig
-from util.derivatives import make_derivatives
 from util.interfaces import Config
 from util.dotdict import DotDict
 from util.plot import Plotting
@@ -19,20 +19,20 @@ def run(config: Config):
     validateConfig(config)
 
     symbols = DotDict()
-
-    for name in config.names.vars + [config.names.eq]:
+    for name in config.names.vars:
         symbols[name] = sp.symbols(name)
-
     symbols_d, exprs_d = make_derivatives(config.names)
     symbols.update(symbols_d)
 
     # set up network by parameters
     network = Network(
-        None,
-        None,
-        config.names,
+        symbols,
+        [symbols[var] for var in config.names.vars],
+        exprs_d,
+        config.preoperations,
         config.operations,
-        config.hyperpars.cellcount,
+        config.hyperparameters.cellcount,
+        config.eq,
         config.verbosity
     )
 

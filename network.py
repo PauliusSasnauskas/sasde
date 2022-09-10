@@ -1,15 +1,38 @@
+from enum import Enum
 from sys import setrecursionlimit
+from typing import Callable, Sequence
 import sympy as sp
 from jax import jit, vmap, value_and_grad
 import jax.numpy as np
+from jaxtyping import Array
 from util.dotdict import DotDict
+from util.interfaces import Numeric, SymbolicNumeric
 from util.print import pad, info
 
 setrecursionlimit(10000)
 
+class PruneStrategy(Enum):
+    ALL = 0
+    SINGLE = 1
+
 class Link:
-    def __init__(self, operations, fr, to, prune_strategy=1):
-        self.input = sp.symbols(f'input_{fr}__{to}')
+    is_pruned: bool = False
+    inputs: Sequence[sp.Expr]
+    operations: Sequence[Callable[..., SymbolicNumeric]]
+    prune_strategy: PruneStrategy
+    alphas: Sequence[sp.Expr]
+    weights: Array
+    forward: Callable[..., SymbolicNumeric]
+    penalty: sp.Expr
+
+    def __init__(self,
+        operations: Callable[..., SymbolicNumeric],
+        fr: int,
+        to: int,
+        parameter_count: int = 1,
+        prune_strategy: PruneStrategy = PruneStrategy.SINGLE
+    ):
+        self.inputs = sp.symbols([f'input{i}_{fr}__{to}' for i in range(parameter_count)])
         self.operations = operations
         self.prune_strategy = prune_strategy
 
@@ -19,27 +42,28 @@ class Link:
         self.weights = np.zeros((len(self.operations),))
 
         self.make_forward()
-        self.make_penalty()
 
-    def make_forward(self):
+    def make_forward(self, override_penalty_target: Numeric = 1):
         all_sum = sum([
-            alpha * operation(self.input)
+            alpha * operation(*self.inputs)
             for alpha, operation in zip(self.alphas, self.operations)
         ])
-        self.forward = lambda input: all_sum.subs(self.input, input)
+        self.forward = lambda *inputs: all_sum.subs(zip(self.inputs, inputs))
 
-    def make_penalty(self, override_sum = 1):
-        self.penalty = (sum(self.alphas) - override_sum)**2
+        if self.is_pruned:
+            self.penalty = 0
+        else:
+            self.penalty = (sum(self.alphas) - override_penalty_target)**2
 
     def assign_weights(self, weights):
         self.weights = weights
 
     def prune(self):
-        if self.is_pruned():
+        if self.is_pruned:
             print("Link already pruned!")
             return
 
-        if self.prune_strategy == 0:
+        if self.prune_strategy == PruneStrategy.ALL:
             keep_index = np.argmax(self.weights)
 
             weight_sum = np.sum(self.weights)
@@ -50,9 +74,9 @@ class Link:
 
             info(f'Shed {weight_sum - self.weights[0]} weight')
 
+            self.is_pruned = True
             self.make_forward()
-            self.penalty = 0
-        elif self.prune_strategy == 1:
+        elif self.prune_strategy == PruneStrategy.SINGLE:
             remove_index = int(np.argmin(self.weights))
             info(f'Shed {self.weights[remove_index]} weight')
 
@@ -60,62 +84,76 @@ class Link:
             self.operations = self.operations[:remove_index] + self.operations[remove_index + 1:]
             self.weights = np.delete(self.weights, remove_index)
 
-            self.make_forward()
-            self.make_penalty(float(np.sum(self.weights)))
-
             if len(self.alphas) == 1:
-                self.penalty = 0
+                self.is_pruned = True
 
-
-    def is_pruned(self):
-        return self.penalty == 0
+            self.make_forward(float(np.sum(self.weights)))
 
 
 class Network:
-    def __init__(self, loss_model_func, loss_integration_func, names, operations, node_count = 4, verbose = 0):
-        self.loss_model_func = loss_model_func
-        self.loss_integration_func = loss_integration_func
+    symbols: dict[str, sp.Expr]
+    symbols_input: dict[str, sp.Expr]
+    derivative_replacements: dict[str, Callable[[sp.Expr], sp.Expr]]
+    preoperations: Sequence[Callable[..., SymbolicNumeric]]
+    operations: Sequence[Callable[[SymbolicNumeric], SymbolicNumeric]]
+    node_count: int
+    equation_function: Callable[[dict[str, sp.Expr]], sp.Expr]
+    verbose: int
+
+    debug: dict = DotDict()
+    is_final: bool = False
+
+    lambdify_modules = {
+        "exp": np.exp,
+        "sin": np.sin,
+        "cos": np.cos,
+        "Min": np.minimum,
+        "Max": np.maximum,
+        "fmin": np.minimum,
+        "fmax": np.maximum,
+        "min": np.minimum,
+        "max": np.maximum,
+        "log": np.log,
+        "Abs": np.abs,
+        "abs": np.abs
+    }
+
+    def __init__(self,
+        symbols: dict[str, sp.Expr],
+        symbols_input: Sequence[sp.Expr],
+        derivative_replacements: dict[str, Callable[[sp.Expr], sp.Expr]],
+        preoperations: Sequence[Callable[..., SymbolicNumeric]],
+        operations: Sequence[Callable[[SymbolicNumeric], SymbolicNumeric]],
+        node_count: int,
+        equation_function: Callable[[dict[str, sp.Expr]], sp.Expr],
+        verbose: int = 0
+    ):
+        self.symbols = symbols
+        self.symbols_input = symbols_input
+        self.derivative_replacements = derivative_replacements
         self.operations = operations
+        # self.loss_integration_func = loss_integration_func
         self.node_count = node_count
-        self.is_final = False
+        self.equation_function = equation_function
         self.verbose = verbose
 
-        self.debug = {}
         self.model_y = None
         self.func_y = None
 
-        self.symbols = DotDict()
-        self.symbols[names.eq] = sp.symbols(names.eq)
-        for varname in names.vars:
-            self.symbols[varname] = sp.symbols(varname)
-
-        self.x = sp.symbols('x') # TODO
         self.fmax = sp.Function('fmax')
         self.b_weight = np.zeros(1)[0]
-        self.lambdify_modules = {
-            "exp": np.exp,
-            "sin": np.sin,
-            "cos": np.cos,
-            "Min": np.minimum,
-            "Max": np.maximum,
-            "fmin": np.minimum,
-            "fmax": np.maximum,
-            "min": np.minimum,
-            "max": np.maximum,
-            "log": np.log,
-            "Abs": np.abs,
-            "abs": np.abs
-        }
 
         self.links = {}
 
-        for i in range(node_count):
-            self.links[i] = {}
-            for j in range(i+1, node_count):
-                self.links[i][j] = Link(operations[::], i, j)
+        for fr in range(node_count):
+            self.links[fr] = {}
+            for to in range(fr+1, node_count):
+                if fr == 0:
+                    self.links[fr][to] = Link(preoperations[::], fr, to, len(symbols_input))
+                else:
+                    self.links[fr][to] = Link(operations[::], fr, to)
 
     def __get_symbolic_model(self):
-        input = self.x
         self.alphas = []
         self.weights = []
         self.penalties = 0
@@ -126,7 +164,7 @@ class Network:
         for fr, start_links in self.links.items():
             for to, link in start_links.items():
                 if fr == 0:
-                    partial_results[to] += [link.forward(input)]
+                    partial_results[to] += [link.forward(*self.symbols_input)]
                 else:
                     partial_results[to] += [link.forward(sum(partial_results[fr]))]
                 self.alphas += link.alphas
@@ -142,7 +180,7 @@ class Network:
 
     def lambdify(self, loss_integrated):
         loss_lambdified = sp.lambdify(
-            [self.alphas, self.x],
+            [self.alphas, *self.symbols_input],
             loss_integrated,
             modules=self.lambdify_modules,
             cse=True
@@ -158,7 +196,7 @@ class Network:
 
     def lambdify_no_alphas(self, loss_integrated):
         loss_lambdified = sp.lambdify(
-            [self.x],
+            [*self.symbols_input],
             loss_integrated,
             modules=self.lambdify_modules,
             cse=True
@@ -173,20 +211,19 @@ class Network:
         return loss_and_grad
 
     def get_integrated_model_nolambdify(self, model_y):
-        model_y_replacement = sp.symbols('y')
-        model_d2y_replacement = sp.symbols('ddy')
-        # loss_model = sp.Pow(sp.diff(model_y, self.x, 2) - c1 * (model_y) / (1 + model_y), 2, evaluate=False)
+        loss_base = self.equation_function(self.symbols)
+        loss_model = sp.Pow(loss_base, 2, evaluate=False)
+
         # loss_integrated = sp.integrate(loss_model, c1s)
-        loss_model = self.loss_model_func(model_y_replacement, self.x, model_d2y_replacement)
-
-
-
+        # TODO: loss_integration_func
         loss_integrated = sp.integrate(*self.loss_integration_func(loss_model))
         if self.verbose >= 1:
             info('Integrated')
 
-        loss_integrated = loss_integrated.subs(model_y_replacement, model_y)
-        loss_integrated = loss_integrated.subs(model_d2y_replacement, sp.diff(model_y, self.x, 2))
+        # 'run' all diff. replacements
+        for dif_name, dif_function in self.derivative_replacements.items():
+            dif_expr = dif_function(model_y)
+            loss_integrated = loss_integrated.subs(dif_name, dif_expr)
         # info('Substituted y\'s with replacements')
 
         return loss_integrated
@@ -194,16 +231,16 @@ class Network:
     def __get_integrated_model(self, model_y):
         loss_integrated = self.get_integrated_model_nolambdify(model_y)
 
-        # TODO: Keep here or move?
-        model_y_diff = sp.diff(model_y, self.x)
-        model_y_diff_at0 = model_y_diff.subs(self.x, 0)
-        hyperpar = 1
-        loss_boundary_cond = hyperpar * model_y_diff_at0**2
+        # TODO: Add in boundary conditions
+        # model_y_diff = sp.diff(model_y, self.x)
+        # model_y_diff_at0 = model_y_diff.subs(self.x, 0)
+        # hyperpar = 1
+        # loss_boundary_cond = hyperpar * model_y_diff_at0**2
+        # loss_integrated += loss_boundary_cond
+        #
+        # if self.verbose >= 1:
+        #     info('Added boundary condition')
         # ENDTODO
-
-        loss_integrated += loss_boundary_cond
-        if self.verbose >= 1:
-            info('Added boundary condition')
 
         loss_integrated += self.penalties # regularization
         self.debug['loss_integrated'] = loss_integrated
@@ -219,7 +256,7 @@ class Network:
         self.debug['loss_secondary_model'] = loss_secondary_model
 
         loss_secondary_lambdified = sp.lambdify(
-            [self.alphas, self.x, y_actual],
+            [self.alphas, *self.symbols_input, y_actual],
             loss_secondary_model,
             modules=self.lambdify_modules,
             cse=True
@@ -231,7 +268,7 @@ class Network:
 
     def get_model(self, should_integrate=True):
         symbolic_model = self.__get_symbolic_model()
-        self.func_y = sp.lambdify([self.alphas, self.x], symbolic_model)
+        self.func_y = sp.lambdify([self.alphas, *self.symbols_input], symbolic_model)
         # self.func_y = vmap(sp.lambdify([self.alphas, self.x], symbolic_model), (None, 0))
         self.model_y = symbolic_model
         if self.verbose >= 1:
@@ -260,7 +297,6 @@ class Network:
 
     # def _prune_link(self, fr, to):
     #     self.links[fr][to].prune()
-
     #     return self.get_model()
 
     def prune_auto(self):

@@ -1,14 +1,15 @@
 import sympy as sp
-from main import Config, ConfigHyperparameters, ConfigNames, run
+from util.interfaces import Config, ConfigHyperparameters, ConfigNames
+from main import run
 
 a = 1
 
 config = Config(
-  names=ConfigNames(
-    eq='u',
-    vars=['x', 'y']
+  names = ConfigNames(
+    eq = 'u',
+    vars = ['x', 'y']
   ),
-  bounds=[(-1, 1), (-1, 1)],
+  bounds = [(-1, 1), (-1, 1)],
   eq = lambda s: s.dudx2 + s.dudy2 + s.dudy ** 2 - 2 * s.y + s.x ** 4,
   conds = [
     lambda s: s.u.subs(s.x, 0),
@@ -16,6 +17,7 @@ config = Config(
     lambda s: s.u.subs(s.y, 0) - a * s.x,
     lambda s: s.u.subs(s.y, 1) - s.x * (s.x + a)
   ],
+  preoperations = [],
   operations = [
     lambda z: 0,
     lambda z: 1,

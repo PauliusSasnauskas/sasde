@@ -1,8 +1,8 @@
 import itertools
 from typing import Callable, Sequence
 import sympy as sp
-from .interfaces import ConfigNames
-from .dotdict import DotDict
+from util.interfaces import ConfigNames
+from util.dotdict import DotDict
 
 def make_derivative_name(eq: str, vars: Sequence[str], orders: Sequence[int]):
     var_names = ''
