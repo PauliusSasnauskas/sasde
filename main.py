@@ -19,9 +19,9 @@ def run(config: Config):
     validateConfig(config)
 
     symbols = DotDict()
-    for name in config.names.vars:
-        symbols[name] = sp.symbols(name)
-    symbols_d, exprs_d = make_derivatives(config.names)
+    for varinfo in config.vars:
+        symbols[varinfo.name] = sp.symbols(varinfo.name)
+    symbols_d, exprs_d = make_derivatives(config.eq.name, [var.name for var in config.vars])
     symbols.update(symbols_d)
 
     # set up network by parameters

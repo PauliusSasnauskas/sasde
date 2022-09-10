@@ -6,9 +6,16 @@ Numeric = float | int # TODO: add jax numeric type
 SymbolicNumeric = Numeric | sp.Expr
 
 @dataclass
-class ConfigNames:
-    eq: str
-    vars: Sequence[str]
+class ConfigEqInfo:
+    name: str
+    function: Callable[[dict[str, sp.Expr]], sp.Expr]
+
+@dataclass
+class ConfigVarInfo:
+    name: str
+    bounds: Tuple[Numeric, Numeric]
+    integrable: bool
+
 
 @dataclass
 class ConfigHyperparameters:
@@ -18,9 +25,8 @@ class ConfigHyperparameters:
 
 @dataclass
 class Config:
-    names: ConfigNames
-    bounds: Sequence[Tuple[Numeric, ...]]
-    eq: Callable[[dict[str, sp.Expr]], sp.Expr]
+    eq: ConfigEqInfo
+    vars: Sequence[ConfigVarInfo]
     conds: Sequence[Numeric]
     preoperations: Sequence[Callable[..., SymbolicNumeric]]
     operations: Sequence[Callable[[SymbolicNumeric], SymbolicNumeric]]

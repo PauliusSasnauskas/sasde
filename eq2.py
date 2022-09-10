@@ -1,14 +1,16 @@
 import sympy as sp
-from util.interfaces import Config, ConfigHyperparameters, ConfigNames
+from util.interfaces import Config, ConfigEqInfo, ConfigHyperparameters, ConfigVarInfo
 from main import run
 
 config = Config(
-  names = ConfigNames(
-    eq = 'y',
-    vars = ['k', 'x'],
+  eq = ConfigEqInfo(
+    name = 'y',
+    function = lambda s: s.dydx - s.k * s.x,
   ),
-  bounds = [(1.4, 1.6), (0, 1)],
-  eq = lambda s: s.dydx - s.k * s.x,
+  vars = [
+    ConfigVarInfo('k', (1.4, 1.6), True),
+    ConfigVarInfo('x', (0, 1), False),
+  ],
   conds = [],
   preoperations = [
     lambda k, x: 0,
