@@ -1,5 +1,5 @@
 from sympy.core.expr import Expr
-from util.dotdict import DotDict
+from .dotdict import DotDict
 
 def isNotEmpty(val, valname):
     if val is None:

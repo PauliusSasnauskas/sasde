@@ -1,23 +1,32 @@
 import sympy as sp
-from jax import random
 from jax import config as jax_config
+from jax import random
 import jax.numpy as np
-
-jax_config.update('jax_platform_name', 'cpu')
-
-# !rm /etc/localtime
-# !ln -s /usr/share/zoneinfo/Europe/Vilnius /etc/localtime
-
+from util.asserts import validateConfig
+from util.derivatives import make_derivatives
+from util.interfaces import Config
+from util.dotdict import DotDict
 from util.plot import Plotting
 from util.print import a, d, pad, info
-from util.dotdict import DotDict
-from util.asserts import validateConfig
 from network import Network
 from train import train
 
-def run(config):
+jax_config.update('jax_platform_name', 'cpu')
+
+# Code
+
+def run(config: Config):
     validateConfig(config)
 
+    symbols = DotDict()
+
+    for name in config.names.vars + [config.names.eq]:
+        symbols[name] = sp.symbols(name)
+
+    symbols_d, exprs_d = make_derivatives(config.names)
+    symbols.update(symbols_d)
+
+    # set up network by parameters
     network = Network(
         None,
         None,
@@ -26,3 +35,8 @@ def run(config):
         config.hyperpars.cellcount,
         config.verbosity
     )
+
+    # train network
+    # output progress
+
+    # output final result
