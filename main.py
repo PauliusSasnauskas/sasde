@@ -13,8 +13,6 @@ from train import train
 
 jax_config.update('jax_platform_name', 'cpu')
 
-# Code
-
 def run(config: Config):
     validateConfig(config)
 
@@ -24,7 +22,7 @@ def run(config: Config):
     symbols_d, exprs_d = make_derivatives(config.eq.name, [var.name for var in config.vars])
     symbols.update(symbols_d)
 
-    # set up network by parameters
+    # set up network by configuration
     network = Network(
         symbols,
         [symbols[var] for var in config.names.vars],
@@ -37,6 +35,8 @@ def run(config: Config):
         config.conditions,
         config.verbosity
     )
+
+    _, model_y, loss_and_grad, _ = network.get_model()
 
     # train network
     # output progress

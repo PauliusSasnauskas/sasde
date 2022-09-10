@@ -55,7 +55,7 @@ class Link:
         else:
             self.penalty = (sum(self.alphas) - override_penalty_target)**2
 
-    def assign_weights(self, weights):
+    def assign_weights(self, weights: Array):
         self.weights = weights
 
     def prune(self):
@@ -189,7 +189,7 @@ class Network:
 
         return symbolic_model
 
-    def lambdify(self, loss_integrated):
+    def lambdify(self, loss_integrated: sp.Expr):
         loss_lambdified = sp.lambdify(
             [self.alphas, *self.symbols_input],
             loss_integrated,
@@ -205,7 +205,7 @@ class Network:
 
         return loss_and_grad
 
-    def lambdify_no_alphas(self, loss_integrated):
+    def lambdify_no_alphas(self, loss_integrated: sp.Expr):
         loss_lambdified = sp.lambdify(
             [*self.symbols_input],
             loss_integrated,
@@ -221,7 +221,7 @@ class Network:
 
         return loss_and_grad
 
-    def get_constructed_model_nolambdify(self, model_y):
+    def get_constructed_model_nolambdify(self, model_y: sp.Expr):
         loss_base = self.eq.function(self.symbols)
         loss_model = sp.Pow(loss_base, 2, evaluate=False)
 
@@ -239,7 +239,7 @@ class Network:
 
         return loss_model
 
-    def __get_integrated_model(self, model_y):
+    def __get_integrated_model(self, model_y: sp.Expr):
         loss_constructed = self.get_constructed_model_nolambdify(model_y)
 
         for cond_hyperparameter, cond_function in self.conditions:
@@ -256,7 +256,7 @@ class Network:
             info('Lambdified')
         return loss_and_grad
 
-    def __get_secondary_model(self, model_y):
+    def __get_secondary_model(self, model_y: sp.Expr):
         y_actual = sp.symbols("y_actual")
         loss_secondary_model = (y_actual - model_y)**2
         self.debug['loss_secondary_model'] = loss_secondary_model
@@ -272,7 +272,7 @@ class Network:
         self.loss_and_grad_secondary = jit(value_and_grad(loss_secondary_lambdified))
 
 
-    def get_model(self, should_integrate=True):
+    def get_model(self, should_integrate: bool = True):
         symbolic_model = self.__get_symbolic_model()
         self.func_y = sp.lambdify([self.alphas, *self.symbols_input], symbolic_model)
         # self.func_y = vmap(sp.lambdify([self.alphas, self.x], symbolic_model), (None, 0))
@@ -291,7 +291,7 @@ class Network:
 
         return np.array(self.weights), symbolic_model, loss_and_grad, self.is_final
 
-    def assign_weights(self, weights):
+    def assign_weights(self, weights: Array):
         self.weights = weights
         self.b_weight = weights[len(weights)-1]
         w_fr = 0
@@ -310,3 +310,6 @@ class Network:
         self.is_final = True
         print("Nothing more to prune!")
         return self.get_model()
+
+    def set_operating_var(self, operating_var: str):
+        self.operating_var = operating_var

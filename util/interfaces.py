@@ -15,7 +15,6 @@ class ConfigVarInfo:
     bounds: Tuple[Numeric, Numeric]
     integrable: bool
 
-
 @dataclass
 class ConfigHyperparameters:
     lr: Numeric
