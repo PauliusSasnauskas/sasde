@@ -6,7 +6,7 @@ from jax import jit, vmap, value_and_grad
 import jax.numpy as np
 from jaxtyping import Array
 from util.dotdict import DotDict
-from util.interfaces import Numeric, SymbolicNumeric
+from util.interfaces import ConfigEqInfo, ConfigVarInfo, Numeric, SymbolicNumeric
 from util.print import pad, info
 
 setrecursionlimit(10000)
@@ -97,7 +97,10 @@ class Network:
     preoperations: Sequence[Callable[..., SymbolicNumeric]]
     operations: Sequence[Callable[[SymbolicNumeric], SymbolicNumeric]]
     node_count: int
-    equation_function: Callable[[dict[str, sp.Expr]], sp.Expr]
+    eq: ConfigEqInfo
+    variables: dict[str, ConfigVarInfo]
+    operating_var: str
+    conditions: Sequence[tuple[Numeric, Callable[[dict[str, sp.Expr]], sp.Expr]]]
     verbose: int
 
     debug: dict = DotDict()
@@ -125,16 +128,20 @@ class Network:
         preoperations: Sequence[Callable[..., SymbolicNumeric]],
         operations: Sequence[Callable[[SymbolicNumeric], SymbolicNumeric]],
         node_count: int,
-        equation_function: Callable[[dict[str, sp.Expr]], sp.Expr],
+        eq: ConfigEqInfo,
+        variables: dict[str, ConfigVarInfo],
+        conditions: Sequence[tuple[Numeric, Callable[[dict[str, sp.Expr]], sp.Expr]]],
         verbose: int = 0
     ):
         self.symbols = symbols
         self.symbols_input = symbols_input
         self.derivative_replacements = derivative_replacements
         self.operations = operations
-        # self.loss_integration_func = loss_integration_func
         self.node_count = node_count
-        self.equation_function = equation_function
+        self.eq = eq
+        self.variables = variables
+        self.operating_var = list(self.variables.keys())[0]
+        self.conditions = conditions
         self.verbose = verbose
 
         self.model_y = None
@@ -176,7 +183,11 @@ class Network:
         self.alphas += [b]
         self.weights += [self.b_weight]
 
-        return sum(partial_results[last_index]) + b
+        symbolic_model = sum(partial_results[last_index]) + b
+
+        self.symbols[self.eq.name] = symbolic_model
+
+        return symbolic_model
 
     def lambdify(self, loss_integrated):
         loss_lambdified = sp.lambdify(
@@ -210,42 +221,37 @@ class Network:
 
         return loss_and_grad
 
-    def get_integrated_model_nolambdify(self, model_y):
-        loss_base = self.equation_function(self.symbols)
+    def get_constructed_model_nolambdify(self, model_y):
+        loss_base = self.eq.function(self.symbols)
         loss_model = sp.Pow(loss_base, 2, evaluate=False)
 
-        # loss_integrated = sp.integrate(loss_model, c1s)
-        # TODO: loss_integration_func
-        loss_integrated = sp.integrate(*self.loss_integration_func(loss_model))
-        if self.verbose >= 1:
-            info('Integrated')
+        operating_var = self.variables[self.operating_var]
+        if operating_var.integrable:
+            loss_model = sp.integrate(loss_model, operating_var.bounds)
+            if self.verbose >= 1:
+                info('Integrated')
 
         # 'run' all diff. replacements
         for dif_name, dif_function in self.derivative_replacements.items():
             dif_expr = dif_function(model_y)
-            loss_integrated = loss_integrated.subs(dif_name, dif_expr)
+            loss_model = loss_model.subs(dif_name, dif_expr)
         # info('Substituted y\'s with replacements')
 
-        return loss_integrated
+        return loss_model
 
     def __get_integrated_model(self, model_y):
-        loss_integrated = self.get_integrated_model_nolambdify(model_y)
+        loss_constructed = self.get_constructed_model_nolambdify(model_y)
 
-        # TODO: Add in boundary conditions
-        # model_y_diff = sp.diff(model_y, self.x)
-        # model_y_diff_at0 = model_y_diff.subs(self.x, 0)
-        # hyperpar = 1
-        # loss_boundary_cond = hyperpar * model_y_diff_at0**2
-        # loss_integrated += loss_boundary_cond
-        #
-        # if self.verbose >= 1:
-        #     info('Added boundary condition')
-        # ENDTODO
+        for cond_hyperparameter, cond_function in self.conditions:
+            cond_squared_loss = sp.Pow(cond_function(self.symbols), 2)
+            loss_constructed += cond_hyperparameter * cond_squared_loss
+            # if self.verbose >= 1:
+            #     info('Added boundary condition')
 
-        loss_integrated += self.penalties # regularization
-        self.debug['loss_integrated'] = loss_integrated
+        loss_constructed += self.penalties # regularization
+        self.debug['loss_constructed'] = loss_constructed
 
-        loss_and_grad = self.lambdify(loss_integrated)
+        loss_and_grad = self.lambdify(loss_constructed)
         if self.verbose >= 1:
             info('Lambdified')
         return loss_and_grad
@@ -294,10 +300,6 @@ class Network:
                 w_len = len(link.alphas)
                 link.assign_weights(weights[w_fr : w_fr + w_len])
                 w_fr += w_len
-
-    # def _prune_link(self, fr, to):
-    #     self.links[fr][to].prune()
-    #     return self.get_model()
 
     def prune_auto(self):
         for _, start_links in self.links.items():

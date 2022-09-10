@@ -9,15 +9,15 @@ config = Config(
     name = 'u',
     function = lambda s: s.dudx2 + s.dudy2 + s.dudy ** 2 - 2 * s.y + s.x ** 4,
   ),
-  vars = [
-    ConfigVarInfo('x', (-1, 1), False),
-    ConfigVarInfo('y', (-1, 1), False),
-  ],
-  conds = [
-    lambda s: s.u.subs(s.x, 0),
-    lambda s: s.u.subs(s.x, 1) - s.y - a,
-    lambda s: s.u.subs(s.y, 0) - a * s.x,
-    lambda s: s.u.subs(s.y, 1) - s.x * (s.x + a)
+  vars = {
+    'x': ConfigVarInfo((-1, 1), False),
+    'y': ConfigVarInfo((-1, 1), False),
+  },
+  conditions = [
+    (1., lambda s: s.u.subs(s.x, 0)),
+    (1., lambda s: s.u.subs(s.x, 1) - s.y - a),
+    (1., lambda s: s.u.subs(s.y, 0) - a * s.x),
+    (1., lambda s: s.u.subs(s.y, 1) - s.x * (s.x + a))
   ],
   preoperations = [],
   operations = [
@@ -34,7 +34,6 @@ config = Config(
   hyperparameters = ConfigHyperparameters(
     lr = 0.0001,
     cellcount = 4,
-    conds = [1., 1., 1., 1.],
   ),
   epochs = 10,
   batchsize = 16,

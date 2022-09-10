@@ -33,6 +33,8 @@ def run(config: Config):
         config.operations,
         config.hyperparameters.cellcount,
         config.eq,
+        config.vars,
+        config.conditions,
         config.verbosity
     )
 

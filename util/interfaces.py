@@ -12,7 +12,6 @@ class ConfigEqInfo:
 
 @dataclass
 class ConfigVarInfo:
-    name: str
     bounds: Tuple[Numeric, Numeric]
     integrable: bool
 
@@ -21,13 +20,12 @@ class ConfigVarInfo:
 class ConfigHyperparameters:
     lr: Numeric
     cellcount: int
-    conds: Sequence[Numeric]
 
 @dataclass
 class Config:
     eq: ConfigEqInfo
-    vars: Sequence[ConfigVarInfo]
-    conds: Sequence[Numeric]
+    vars: dict[str, ConfigVarInfo]
+    conditions: Sequence[tuple[Numeric, Callable[[dict[str, sp.Expr]], sp.Expr]]]
     preoperations: Sequence[Callable[..., SymbolicNumeric]]
     operations: Sequence[Callable[[SymbolicNumeric], SymbolicNumeric]]
     hyperparameters: ConfigHyperparameters

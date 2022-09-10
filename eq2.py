@@ -7,11 +7,11 @@ config = Config(
     name = 'y',
     function = lambda s: s.dydx - s.k * s.x,
   ),
-  vars = [
-    ConfigVarInfo('k', (1.4, 1.6), True),
-    ConfigVarInfo('x', (0, 1), False),
-  ],
-  conds = [],
+  vars = {
+    'k': ConfigVarInfo((1.4, 1.6), True),
+    'x': ConfigVarInfo((0, 1), False),
+  },
+  conditions = [],
   preoperations = [
     lambda k, x: 0,
     lambda k, x: 1,
@@ -32,7 +32,6 @@ config = Config(
   hyperparameters = ConfigHyperparameters(
     lr = 0.0001,
     cellcount = 4,
-    conds = [],
   ),
   epochs = 10,
   batchsize = 16,
