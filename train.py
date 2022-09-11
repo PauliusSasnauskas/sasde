@@ -1,11 +1,12 @@
 from jax import random
 import jax.numpy as np
+from network import Network
 from util.dataset import shuffle, batch_dataset, gen_dataset
 from util.print import a, info
 from util.dotdict import DotDict
 
 def train(
-    network,
+    network: Network,
     dataset,
     plotting,
     key = None,

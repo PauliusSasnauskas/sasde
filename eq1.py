@@ -1,17 +1,17 @@
 import sympy as sp
-from util.interfaces import Config, ConfigEqInfo, ConfigHyperparameters, ConfigVarInfo
+from util.interfaces import Config, EqInfo, Hyperparameters, VarInfo
 from main import run
 
 a = 1
 
 config = Config(
-  eq = ConfigEqInfo(
+  eq = EqInfo(
     name = 'u',
     function = lambda s: s.dudx2 + s.dudy2 + s.dudy ** 2 - 2 * s.y + s.x ** 4,
   ),
   vars = {
-    'x': ConfigVarInfo((-1, 1), False),
-    'y': ConfigVarInfo((-1, 1), False),
+    'x': VarInfo(bounds=(-1, 1), integrable=False),
+    'y': VarInfo(bounds=(-1, 1), integrable=False),
   },
   conditions = [
     (1., lambda s: s.u.subs(s.x, 0)),
@@ -31,7 +31,7 @@ config = Config(
     lambda z: z**3,
     lambda z: sp.exp(z) + 0,
   ],
-  hyperparameters = ConfigHyperparameters(
+  hyperparameters = Hyperparameters(
     lr = 0.0001,
     cellcount = 4,
   ),

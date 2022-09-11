@@ -6,7 +6,7 @@ from jax import jit, vmap, value_and_grad
 import jax.numpy as np
 from jaxtyping import Array
 from util.dotdict import DotDict
-from util.interfaces import ConfigEqInfo, ConfigVarInfo, Numeric, SymbolicNumeric
+from util.interfaces import EqInfo, VarInfo, Numeric, SymbolicNumeric
 from util.print import pad, info
 
 setrecursionlimit(10000)
@@ -97,8 +97,8 @@ class Network:
     preoperations: Sequence[Callable[..., SymbolicNumeric]]
     operations: Sequence[Callable[[SymbolicNumeric], SymbolicNumeric]]
     node_count: int
-    eq: ConfigEqInfo
-    variables: dict[str, ConfigVarInfo]
+    eq: EqInfo
+    variables: dict[str, VarInfo]
     operating_var: str
     conditions: Sequence[tuple[Numeric, Callable[[dict[str, sp.Expr]], sp.Expr]]]
     verbose: int
@@ -128,8 +128,8 @@ class Network:
         preoperations: Sequence[Callable[..., SymbolicNumeric]],
         operations: Sequence[Callable[[SymbolicNumeric], SymbolicNumeric]],
         node_count: int,
-        eq: ConfigEqInfo,
-        variables: dict[str, ConfigVarInfo],
+        eq: EqInfo,
+        variables: dict[str, VarInfo],
         conditions: Sequence[tuple[Numeric, Callable[[dict[str, sp.Expr]], sp.Expr]]],
         verbose: int = 0
     ):

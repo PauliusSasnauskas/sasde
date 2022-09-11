@@ -1,15 +1,15 @@
 import sympy as sp
-from util.interfaces import Config, ConfigEqInfo, ConfigHyperparameters, ConfigVarInfo
+from util.interfaces import Config, EqInfo, Hyperparameters, VarInfo
 from main import run
 
 config = Config(
-  eq = ConfigEqInfo(
+  eq = EqInfo(
     name = 'y',
     function = lambda s: s.dydx - s.k * s.x,
   ),
   vars = {
-    'k': ConfigVarInfo((1.4, 1.6), True),
-    'x': ConfigVarInfo((0, 1), False),
+    'k': VarInfo(bounds=(1.4, 1.6), integrable=True),
+    'x': VarInfo(bounds=(0, 1), integrable=False),
   },
   conditions = [],
   preoperations = [
@@ -29,7 +29,7 @@ config = Config(
     lambda z: z*z,
     lambda z: sp.exp(z) + 0,
   ],
-  hyperparameters = ConfigHyperparameters(
+  hyperparameters = Hyperparameters(
     lr = 0.0001,
     cellcount = 4,
   ),
