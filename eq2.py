@@ -1,6 +1,5 @@
 import sympy as sp
 from util.interfaces import Config, EqInfo, Hyperparameters, VarInfo
-from main import run
 
 config = Config(
   eq = EqInfo(
@@ -39,5 +38,3 @@ config = Config(
   batchsize = 16,
   verbosity = 1,
 )
-
-run(config)
