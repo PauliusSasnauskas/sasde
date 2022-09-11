@@ -11,7 +11,9 @@ config = Config(
     'k': VarInfo(bounds=(1.4, 1.6), integrable=True),
     'x': VarInfo(bounds=(0, 1), integrable=False),
   },
-  conditions = [],
+  conditions = [
+    (0.001, lambda s: s.y.subs(s.x, 1) - 1)
+  ],
   preoperations = [
     lambda k, x: 0,
     lambda k, x: 1,
@@ -33,7 +35,7 @@ config = Config(
     lr = 0.0001,
     cellcount = 4,
   ),
-  epochs = 10,
+  epochs = 16,
   batchsize = 16,
   verbosity = 1,
 )

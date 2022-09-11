@@ -1,14 +1,21 @@
+from typing import Any, Callable
 import matplotlib.pyplot as plt
 import jax.numpy as np
+
+from .interfaces import Config, Numeric
 from .print import pad
 
+# TODO: fix
+
 class Plotting:
-    def __init__(self, actual_func, network, x_bounds, c2_bounds):
+    funcs = []
+    actual_func: Callable[..., Numeric]
+    network: Any
+
+    def __init__(self, actual_func: Callable[..., Numeric], network, config: Config):
         self.actual_func = actual_func
         self.network = network
-        self.x_bounds = x_bounds
-        self.c2_bounds = c2_bounds
-        self.funcs = []
+        self.config = config
 
     def init(self, W):
         self.funcs += [self.get_func(W)]

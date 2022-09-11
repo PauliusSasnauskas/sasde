@@ -103,6 +103,8 @@ class Network:
     conditions: Sequence[tuple[Numeric, Callable[[dict[str, sp.Expr]], sp.Expr]]]
     verbose: int
 
+    alphas: Sequence[sp.Expr]
+
     debug: dict = DotDict()
     is_final: bool = False
 
@@ -200,7 +202,7 @@ class Network:
         self.debug['loss_lambdified'] = loss_lambdified
 
         # JAXify function
-        loss_and_grad = jit(vmap(value_and_grad(loss_lambdified, reduce_axes=("batch",)), (None, 0)))
+        loss_and_grad = jit(vmap(value_and_grad(loss_lambdified, reduce_axes=("batch",)), (None, *(0 for _ in self.symbols_input))))
         self.loss_and_grad = loss_and_grad
 
         return loss_and_grad
@@ -216,7 +218,7 @@ class Network:
         self.debug['loss_lambdified'] = loss_lambdified
 
         # JAXify function
-        loss_and_grad = jit(vmap(value_and_grad(loss_lambdified, reduce_axes=("batch",)), (0,)))
+        loss_and_grad = jit(vmap(value_and_grad(loss_lambdified, reduce_axes=("batch",)), (*(0 for _ in self.symbols_input),)))
         self.loss_and_grad = loss_and_grad
 
         return loss_and_grad
@@ -227,7 +229,7 @@ class Network:
 
         operating_var = self.variables[self.operating_var]
         if operating_var.integrable:
-            loss_model = sp.integrate(loss_model, operating_var.bounds)
+            loss_model = sp.integrate(loss_model, (self.operating_var, *operating_var.bounds))
             if self.verbose >= 1:
                 info('Integrated')
 
@@ -289,7 +291,7 @@ class Network:
 
         self.__get_secondary_model(symbolic_model)
 
-        return np.array(self.weights), symbolic_model, loss_and_grad, self.is_final
+        return np.array(self.weights), symbolic_model, loss_and_grad
 
     def assign_weights(self, weights: Array):
         self.weights = weights
@@ -304,7 +306,7 @@ class Network:
     def prune_auto(self):
         for _, start_links in self.links.items():
             for _, link in start_links.items():
-                if not link.is_pruned():
+                if not link.is_pruned:
                     link.prune()
                     return self.get_model()
         self.is_final = True

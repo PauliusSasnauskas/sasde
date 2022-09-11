@@ -1,14 +1,10 @@
 from sympy.core.expr import Expr
-from .dotdict import DotDict
+
+from .interfaces import Config
 
 def isNotEmpty(val, valname):
     if val is None:
         raise KeyError(f'{valname} is missing')
-
-def isDict(val, valname):
-    isNotEmpty(val, valname)
-    if not isinstance(val, (dict, DotDict)):
-        raise KeyError(f'{valname} is not a dict')
 
 def isList(val, valname):
     isNotEmpty(val, valname)
@@ -65,26 +61,23 @@ def isFunc(val, valname):
 def isFuncList(val, valname):
     isListOfSomething(isFunc, val, valname)
 
-def validateConfig(config):
-    isDict(config, 'The config object')
+def validateConfig(config: Config):
+    # TODO: fix
+    pass
+    # isFloatPairList(config, 'bounds')
+    # isFunc(config.eq, 'eq')
+    # isFuncList(config.conds, 'conds')
+    # isFuncList(config.operations, 'operations')
+    # isDict(config.hyperpars, 'hyperpars')
+    # isFloat(config.hyperpars.lr, 'hyperpars.lr')
+    # isInteger(config.hyperpars.cellcount, 'hyperpars.cellcount')
+    # isFloatList(config.hyperpars.conds, 'hyperpars.conds')
+    # isInteger(config.epochs, 'epochs')
+    # isInteger(config.batchsize, 'batchsize')
+    # isInteger(config.verbosity, 'verbosity')
 
-    isDict(config.names, 'names')
-    isString(config.names.eq, 'names.eq')
-    isStringList(config.names.vars, 'names.vars')
-    isFloatPairList(config.bounds, 'bounds')
-    isFunc(config.eq, 'eq')
-    isFuncList(config.conds, 'conds')
-    isFuncList(config.operations, 'operations')
-    isDict(config.hyperpars, 'hyperpars')
-    isFloat(config.hyperpars.lr, 'hyperpars.lr')
-    isInteger(config.hyperpars.cellcount, 'hyperpars.cellcount')
-    isFloatList(config.hyperpars.conds, 'hyperpars.conds')
-    isInteger(config.epochs, 'epochs')
-    isInteger(config.batchsize, 'batchsize')
-    isInteger(config.verbosity, 'verbosity')
+    # if len(config.names.vars) != len(config.bounds):
+    #     raise KeyError('names.vars length should match bounds length (each named variable must have a range)')
 
-    if len(config.names.vars) != len(config.bounds):
-        raise KeyError('names.vars length should match bounds length (each named variable must have a range)')
-
-    if len(config.conds) != len(config.hyperpars.conds):
-        raise KeyError('conds length should match hyperpars.conds length (each condition should have its hyperparameter)')
+    # if len(config.conds) != len(config.hyperpars.conds):
+    #     raise KeyError('conds length should match hyperpars.conds length (each condition should have its hyperparameter)')
