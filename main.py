@@ -35,28 +35,31 @@ def run(config: Config):
 
     key = random.PRNGKey(2)
     key, subkey = random.split(key)
-    W = random.uniform(subkey, shape=(len(network.alphas),), minval=0, maxval=0.001)
 
     if network.is_final:
         print('Network is final, no training')
 
     best = None
 
-    while not network.is_final:
-        train_results = train(
-            network,
-            config = config,
-            key = key,
-            W_init = W
-        )
+    W = random.uniform(subkey, shape=(len(network.alphas),), minval=0, maxval=0.001)
 
-        best = train_results.best
+    try:
+        while not network.is_final:
+            train_results = train(
+                network,
+                config = config,
+                key = key,
+                W_init = W
+            )
 
-        # loss_history = train_results.loss_history
+            W = train_results.W
+            best = train_results.best
 
-        info('Pruning weights...')
-        network.assign_weights(W)
-        W, _, _ = network.prune_auto()
+            info('Pruning weights...')
+            network.assign_weights(W)
+            W, _, _ = network.prune_auto()
+    except KeyboardInterrupt:
+        info("Stopping...")
 
     y_prediction_best = best.model_y.subs(zip(best.alphas, best.W))
     d(y_prediction_best)

@@ -108,6 +108,8 @@ class Network:
     weights: Array | list[Numeric] = []
     penalties: SymbolicNumeric = 0
 
+    links: dict[str, dict[str, Link]] = {}
+
     debug: dict = DotDict()
     is_final: bool = False
 
@@ -156,8 +158,6 @@ class Network:
 
         self.fmax = sp.Function('fmax')
         self.b_weight = np.zeros(1)[0]
-
-        self.links = {}
 
         for fr in range(node_count):
             self.links[fr] = {}
