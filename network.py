@@ -3,6 +3,7 @@ from sys import setrecursionlimit
 from typing import Callable, Sequence
 import sympy as sp
 from jax import jit, vmap, value_and_grad
+from jax import config as jax_config
 import jax.numpy as np
 from jaxtyping import Array
 from util.dotdict import DotDict
@@ -103,7 +104,9 @@ class Network:
     conditions: Sequence[tuple[Numeric, Callable[[dict[str, sp.Expr]], sp.Expr]]]
     verbose: int
 
-    alphas: Sequence[sp.Expr]
+    alphas: Sequence[sp.Expr] = []
+    weights: Array | list[Numeric] = []
+    penalties: SymbolicNumeric = 0
 
     debug: dict = DotDict()
     is_final: bool = False
@@ -135,6 +138,8 @@ class Network:
         conditions: Sequence[tuple[Numeric, Callable[[dict[str, sp.Expr]], sp.Expr]]],
         verbose: int = 0
     ):
+        jax_config.update('jax_platform_name', 'cpu')
+
         self.symbols = symbols
         self.symbols_input = symbols_input
         self.derivative_replacements = derivative_replacements
@@ -163,8 +168,8 @@ class Network:
                     self.links[fr][to] = Link(operations[::], fr, to)
 
     def __get_symbolic_model(self):
-        self.alphas = []
         self.weights = []
+        self.alphas = []
         self.penalties = 0
 
         b = sp.symbols('b')
@@ -179,19 +184,19 @@ class Network:
                 self.alphas += link.alphas
                 self.weights += link.weights
                 self.penalties += link.penalty
-        last_index = self.node_count - 1
 
-        self.penalties += sum([self.fmax(-alpha, 0.0) for alpha in self.alphas]) # pylint: disable=not-callable
+        self.penalties += sum(self.fmax(-alpha, 0.0) for alpha in self.alphas) # pylint: disable=not-callable
         self.alphas += [b]
         self.weights += [self.b_weight]
 
+        last_index = self.node_count - 1
         symbolic_model = sum(partial_results[last_index]) + b
 
         self.symbols[self.eq.name] = symbolic_model
 
         return symbolic_model
 
-    def lambdify(self, loss_integrated: sp.Expr):
+    def get_loss_function(self, loss_integrated: sp.Expr):
         loss_lambdified = sp.lambdify(
             [self.alphas, *self.symbols_input],
             loss_integrated,
@@ -223,58 +228,35 @@ class Network:
 
         return loss_and_grad
 
-    def get_constructed_model_nolambdify(self, model_y: sp.Expr):
+    def get_loss_model(self, model_y: sp.Expr):
         loss_base = self.eq.function(self.symbols)
         loss_model = sp.Pow(loss_base, 2, evaluate=False)
-
-        operating_var = self.variables[self.operating_var]
-        if operating_var.integrable:
-            loss_model = sp.integrate(loss_model, (self.operating_var, *operating_var.bounds))
-            if self.verbose >= 1:
-                info('Integrated')
+        # loss_model = sp.Abs(loss_base)
 
         # 'run' all diff. replacements
         for dif_name, dif_function in self.derivative_replacements.items():
             dif_expr = dif_function(model_y)
             loss_model = loss_model.subs(dif_name, dif_expr)
-        # info('Substituted y\'s with replacements')
+        if self.verbose >= 2:
+            info('Substituted y\'s with replacements')
+
+        operating_var = self.variables[self.operating_var]
+        # TODO: race condition w/ timer?
+        if operating_var.integrable:
+            # print('loss_model', loss_model)
+            # print('operating_var', (self.operating_var, *operating_var.bounds))
+            result = sp.integrate(loss_model, (self.operating_var, *operating_var.bounds))
+            if isinstance(result, sp.Integral):
+                info(f'Cannot integrate model w.r.t. {self.operating_var}')
+            else:
+                loss_model = result
+                if self.verbose >= 1:
+                    info('Integrated')
 
         return loss_model
 
-    def __get_integrated_model(self, model_y: sp.Expr):
-        loss_constructed = self.get_constructed_model_nolambdify(model_y)
 
-        for cond_hyperparameter, cond_function in self.conditions:
-            cond_squared_loss = sp.Pow(cond_function(self.symbols), 2)
-            loss_constructed += cond_hyperparameter * cond_squared_loss
-            # if self.verbose >= 1:
-            #     info('Added boundary condition')
-
-        loss_constructed += self.penalties # regularization
-        self.debug['loss_constructed'] = loss_constructed
-
-        loss_and_grad = self.lambdify(loss_constructed)
-        if self.verbose >= 1:
-            info('Lambdified')
-        return loss_and_grad
-
-    def __get_secondary_model(self, model_y: sp.Expr):
-        y_actual = sp.symbols("y_actual")
-        loss_secondary_model = (y_actual - model_y)**2
-        self.debug['loss_secondary_model'] = loss_secondary_model
-
-        loss_secondary_lambdified = sp.lambdify(
-            [self.alphas, *self.symbols_input, y_actual],
-            loss_secondary_model,
-            modules=self.lambdify_modules,
-            cse=True
-        )
-        self.debug['loss_secondary_lambdified'] = loss_secondary_lambdified
-
-        self.loss_and_grad_secondary = jit(value_and_grad(loss_secondary_lambdified))
-
-
-    def get_model(self, should_integrate: bool = True):
+    def get_model(self):
         symbolic_model = self.__get_symbolic_model()
         self.func_y = sp.lambdify([self.alphas, *self.symbols_input], symbolic_model)
         # self.func_y = vmap(sp.lambdify([self.alphas, self.x], symbolic_model), (None, 0))
@@ -284,12 +266,21 @@ class Network:
 
         loss_and_grad = None
 
-        if should_integrate:
-            loss_and_grad = self.__get_integrated_model(symbolic_model)
-            if self.verbose >= 1:
-                info('Constructed JAXified model')
+        loss_model = self.get_loss_model(symbolic_model)
 
-        self.__get_secondary_model(symbolic_model)
+        for cond_hyperparameter, cond_function in self.conditions:
+            cond_squared_loss = sp.Pow(cond_function(self.symbols), 2)
+            # cond_squared_loss = sp.Abs(cond_function(self.symbols))
+            loss_model += cond_hyperparameter * cond_squared_loss
+        if len(self.conditions) > 0 and self.verbose >= 2:
+            info('Added boundary conditions')
+
+        loss_model += self.penalties # regularization
+        self.debug['loss_constructed'] = loss_model
+
+        loss_and_grad = self.get_loss_function(loss_model)
+        if self.verbose >= 1:
+            info('Constructed JAXified model')
 
         return np.array(self.weights), symbolic_model, loss_and_grad
 
@@ -313,5 +304,8 @@ class Network:
         print("Nothing more to prune!")
         return self.get_model()
 
-    def set_operating_var(self, operating_var: str):
-        self.operating_var = operating_var
+    def next_operating_var(self):
+        next_var_index = list(self.variables.keys()).index(self.operating_var)
+        if next_var_index >= len(self.variables):
+            next_var_index = 0
+        self.operating_var = list(self.variables.keys())[next_var_index]

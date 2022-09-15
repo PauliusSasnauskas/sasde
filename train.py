@@ -43,7 +43,7 @@ def train(
         key, subkey = random.split(key)
         input_datasets[varname] = gen_dataset(subkey, varinfo.bounds, size=512)
 
-    if config.verbosity >= 1:
+    if config.verbosity >= 2:
         info(f"W₀ = {a(W)}")
 
     # plotting.init(W)
@@ -62,7 +62,6 @@ def train(
                 batches[varname] = batch_dataset(input_datasets[varname], config.batchsize)
 
             for batch in zip(*batches.values()): # minibatches
-                # TODO: fix batch (make sure vmap maps appropriately)
                 loss, grad = network.loss_and_grad(W, *batch)
                 grad_avg = np.average(grad, axis=0)
                 loss_avg = np.average(loss)
@@ -79,14 +78,16 @@ def train(
                         info(f'Found new best: {best.loss} on epoch {epoch}')
 
                 if config.verbosity >= 2:
-                    print(f"\rΔWₛ = {a(-config.hyperparameters.lr * grad_avg)};\tℒₛ = {loss_avg:.6f};")
-                    print(f"W  = {a(W)}", end="")
+                    info(f"\rΔWₛ = {a(-config.hyperparameters.lr * grad_avg)};\tℒₛ = {loss_avg:.6f};")
+                    info(f"W  = {a(W)}", end="")
 
             if config.verbosity >= 1:
-                info(f"Epoch: {epoch+1}, Loss: {np.mean(np.array(loss_epoch))},\tW = {a(W)}")
+                info(f"Epoch: {epoch+1}, Loss: {np.mean(np.array(loss_epoch))}") #,\tW = {a(W)}")
 
             loss_history += [loss_epoch]
             # plotting.after_epoch(W, epoch, np.mean(np.array(loss_epoch)), show_plot=(epoch == epochs-1))
+
+            network.next_operating_var()
 
         except KeyboardInterrupt:
             info("Stopping...")
@@ -94,5 +95,6 @@ def train(
             # plotting.after_epoch(W, epoch, np.mean(np.array(loss_epoch)))
             break
 
-    info(f"W = {a(W)}")
+    if config.verbosity >= 2:
+        info(f"W = {a(W)}")
     return TrainOutput(W, loss_history, best)

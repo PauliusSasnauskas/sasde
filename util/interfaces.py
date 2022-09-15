@@ -1,8 +1,9 @@
 from dataclasses import dataclass
 from typing import Callable, Sequence, Tuple
+from jaxtyping import Float
 import sympy as sp
 
-Numeric = float | int # TODO: add jax numeric type
+Numeric = float | int | Float
 SymbolicNumeric = Numeric | sp.Expr
 
 @dataclass

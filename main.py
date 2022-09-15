@@ -1,5 +1,4 @@
 import sympy as sp
-from jax import config as jax_config
 from jax import random
 from derivatives import make_derivatives
 from util.asserts import validateConfig
@@ -8,8 +7,6 @@ from util.dotdict import DotDict
 from util.print import d, info
 from network import Network
 from train import train
-
-jax_config.update('jax_platform_name', 'cpu')
 
 def run(config: Config):
     validateConfig(config)
@@ -36,8 +33,7 @@ def run(config: Config):
 
     network.get_model()
 
-
-    key = random.PRNGKey(7)
+    key = random.PRNGKey(2)
     key, subkey = random.split(key)
     W = random.uniform(subkey, shape=(len(network.alphas),), minval=0, maxval=0.001)
 
@@ -62,10 +58,7 @@ def run(config: Config):
         network.assign_weights(W)
         W, _, _ = network.prune_auto()
 
-        next_var_index = list(network.variables.keys()).index(network.operating_var)
-        if next_var_index >= len(network.variables):
-            next_var_index = 0
-        network.set_operating_var(list(network.variables.keys())[next_var_index])
-
     y_prediction_best = best.model_y.subs(zip(best.alphas, best.W))
     d(y_prediction_best)
+
+    return network, best
