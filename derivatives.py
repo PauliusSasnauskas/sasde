@@ -10,7 +10,9 @@ def make_derivative_name(eq: str, vars: Sequence[str], orders: Sequence[int]):
             var_names += f'd{var}'
         elif order >= 2:
             var_names += f'd{var}{order}'
-    return f'd{eq}{var_names}'
+    sum_orders = sum(orders)
+    orders_symbol = sum_orders if sum_orders > 1 else ''
+    return f'd{orders_symbol}{eq}{var_names}'
 
 def make_derivatives(eq_name: str, var_names: Sequence[str], derivative_order: int = 3) -> tuple[dict[str, sp.Expr], dict[str, Callable[[sp.Expr], sp.Expr]]]:
     new_symbols = DotDict()

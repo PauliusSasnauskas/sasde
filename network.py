@@ -212,33 +212,12 @@ class Network:
 
         return loss_and_grad
 
-    def lambdify_no_alphas(self, loss_integrated: sp.Expr):
-        loss_lambdified = sp.lambdify(
-            [*self.symbols_input],
-            loss_integrated,
-            modules=self.lambdify_modules,
-            cse=True
-        )
-
-        self.debug['loss_lambdified'] = loss_lambdified
-
-        # JAXify function
-        loss_and_grad = jit(vmap(value_and_grad(loss_lambdified, reduce_axes=("batch",)), (*(0 for _ in self.symbols_input),)))
-        self.loss_and_grad = loss_and_grad
-
-        return loss_and_grad
-
     def get_loss_model(self, model_y: sp.Expr):
         loss_base = self.eq.function(self.symbols)
-        loss_model = sp.Pow(loss_base, 2, evaluate=False)
+        loss_model: sp.Expr = sp.Pow(loss_base, 2, evaluate=False)
         # loss_model = sp.Abs(loss_base)
 
-        # 'run' all diff. replacements
-        for dif_name, dif_function in self.derivative_replacements.items():
-            dif_expr = dif_function(model_y)
-            loss_model = loss_model.subs(dif_name, dif_expr)
-        if self.verbose >= 2:
-            info('Substituted y\'s with replacements')
+        loss_model = self.run_dif_replacements(loss_model, model_y)
 
         operating_var = self.variables[self.operating_var]
         # TODO: race condition w/ timer?
@@ -275,6 +254,9 @@ class Network:
         if len(self.conditions) > 0 and self.verbose >= 2:
             info('Added boundary conditions')
 
+        # TODO: 2nd call to run_dif_replacements, may be optimized?
+        loss_model = self.run_dif_replacements(loss_model, symbolic_model)
+
         loss_model += self.penalties # regularization
         self.debug['loss_constructed'] = loss_model
 
@@ -283,6 +265,15 @@ class Network:
             info('Constructed JAXified model')
 
         return np.array(self.weights), symbolic_model, loss_and_grad
+
+    def run_dif_replacements(self, model, model_y):
+        # 'run' all diff. replacements
+        for dif_name, dif_function in self.derivative_replacements.items():
+            dif_expr = dif_function(model_y)
+            model = model.subs(dif_name, dif_expr)
+        if self.verbose >= 2:
+            info('Substituted y\'s with replacements')
+        return model
 
     def assign_weights(self, weights: Array):
         self.weights = weights

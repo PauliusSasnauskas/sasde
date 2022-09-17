@@ -65,6 +65,10 @@ def train(
             grad_avg = np.average(grad, axis=0)
             loss_avg = np.average(loss)
 
+            if np.isnan(loss_avg):
+                info('Loss is nan, stopping...')
+                break
+
             W -= config.hyperparameters.lr * grad_avg
             loss_epoch += [loss_avg]
 
