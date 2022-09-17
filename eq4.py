@@ -8,11 +8,11 @@ config = Config(
   ),
   vars = {
     'x': VarInfo(bounds=(0, 1), integrable=False),
-    'k': VarInfo(bounds=(10, 20), integrable=False)
+    'k': VarInfo(bounds=(0.001, 0.1), integrable=False)
   },
   conditions = [
-    (1., lambda s: s.y.subs(s.x, 1) - 1),
-    (1., lambda s: s.dydx.subs(s.x, 0)),
+    (100., lambda s: s.y.subs(s.x, 1) - 1),
+    (100., lambda s: s.dydx.subs(s.x, 0)),
   ],
   preoperations = [
     lambda x, k: 0,
@@ -25,6 +25,7 @@ config = Config(
     lambda z: 0,
     lambda z: 1,
     lambda z: z,
+    lambda z: z**2,
     lambda z: z + 1,
     lambda z: -z,
     lambda z: sp.sin(z) + 0,
@@ -32,7 +33,7 @@ config = Config(
     lambda z: sp.exp(z) + 0,
   ],
   hyperparameters = Hyperparameters(
-    lr = 0.0000001,
+    lr = 0.0001,
     cellcount = 4,
   ),
   epochs = 128,
