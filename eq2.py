@@ -1,13 +1,12 @@
 import sympy as sp
 from util.interfaces import Config, EqInfo, Hyperparameters, VarInfo
-from main import run
 
 a = 1
 
 config = Config(
   eq = EqInfo(
     name = 'u',
-    function = lambda s: s.dudx2 + s.dudy2 + s.dudy ** 2 - 2 * s.y + s.x ** 4,
+    function = lambda s: s.d2udx2 + s.d2udy2 + s.dudy ** 2 - 2 * s.y + s.x ** 4,
   ),
   vars = {
     'x': VarInfo(bounds=(-1, 1), integrable=False),
@@ -39,5 +38,3 @@ config = Config(
   batchsize = 16,
   verbosity = 1,
 )
-
-run(config)

@@ -4,7 +4,7 @@ from util.interfaces import Config, EqInfo, Hyperparameters, VarInfo
 config = Config(
   eq = EqInfo(
     name = 'y',
-    function = lambda s: s.dydx2 - 4 * s.dydx + 5 * s.y,
+    function = lambda s: s.d2ydx2 - 4 * s.dydx + 5 * s.y,
   ),
   vars = {
     'x': VarInfo(bounds=(0, 1), integrable=False)
