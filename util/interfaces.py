@@ -15,10 +15,12 @@ class EqInfo:
 class VarInfo:
     bounds: Tuple[Numeric, Numeric]
     integrable: bool
+    symbol: str | None = None
 
 @dataclass
 class Hyperparameters:
     lr: Numeric
+    penalty: Numeric
     cellcount: int
 
 @dataclass

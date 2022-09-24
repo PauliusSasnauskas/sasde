@@ -107,6 +107,7 @@ class Network:
     alphas: Sequence[sp.Expr] = []
     weights: Array | list[Numeric] = []
     penalties: SymbolicNumeric = 0
+    penalty_hyperparameter: Numeric
 
     links: dict[str, dict[str, Link]] = {}
 
@@ -138,6 +139,7 @@ class Network:
         eq: EqInfo,
         variables: dict[str, VarInfo],
         conditions: Sequence[tuple[Numeric, Callable[[dict[str, sp.Expr]], sp.Expr]]],
+        penalty_hyperparameter: Numeric,
         verbose: int = 0
     ):
         jax_config.update('jax_platform_name', 'cpu')
@@ -151,10 +153,11 @@ class Network:
         self.variables = variables
         self.operating_var = list(self.variables.keys())[0]
         self.conditions = conditions
+        self.penalty_hyperparameter = penalty_hyperparameter
         self.verbose = verbose
 
         self.model_y = None
-        self.func_y = None
+        # self.func_y = None
 
         self.fmax = sp.Function('fmax')
         self.b_weight = np.zeros(1)[0]
@@ -237,7 +240,7 @@ class Network:
 
     def get_model(self):
         symbolic_model = self.__get_symbolic_model()
-        self.func_y = sp.lambdify([self.alphas, *self.symbols_input], symbolic_model)
+        # self.func_y = sp.lambdify([self.alphas, *self.symbols_input], symbolic_model)
         # self.func_y = vmap(sp.lambdify([self.alphas, self.x], symbolic_model), (None, 0))
         self.model_y = symbolic_model
         if self.verbose >= 1:
@@ -246,6 +249,8 @@ class Network:
         loss_and_grad = None
 
         loss_model = self.get_loss_model(symbolic_model)
+        if self.verbose >= 1:
+            info('Constructed loss equation')
 
         for cond_hyperparameter, cond_function in self.conditions:
             cond_squared_loss = sp.Pow(cond_function(self.symbols), 2)
@@ -257,7 +262,7 @@ class Network:
         # TODO: 2nd call to run_dif_replacements, may be optimized?
         loss_model = self.run_dif_replacements(loss_model, symbolic_model)
 
-        loss_model += self.penalties # regularization
+        loss_model += self.penalty_hyperparameter * self.penalties # regularization
         self.debug['loss_constructed'] = loss_model
 
         loss_and_grad = self.get_loss_function(loss_model)

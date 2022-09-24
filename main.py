@@ -28,6 +28,7 @@ def run(config: Config):
         config.eq,
         config.vars,
         config.conditions,
+        config.hyperparameters.penalty,
         config.verbosity
     )
 

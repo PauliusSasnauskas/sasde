@@ -65,7 +65,12 @@ def train(
             grad_avg = np.average(grad, axis=0)
             loss_avg = np.average(loss)
 
-            if np.isnan(loss_avg):
+            grad = grad.at[np.isnan(grad)].set(0)
+
+            grad = np.clip(grad, -0.5, 0.5)
+
+            if np.any(np.isnan(loss)) or np.any(np.isnan(grad)):
+                # continue
                 info('Loss is nan, stopping...')
                 break
 
