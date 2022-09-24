@@ -32,6 +32,7 @@ config = Config(
   ],
   hyperparameters = Hyperparameters(
     lr = 0.0001,
+    penalty = 1,
     cellcount = 4,
   ),
   epochs = 10,

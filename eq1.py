@@ -7,11 +7,11 @@ config = Config(
     function = lambda s: s.dydx - s.k * s.y,
   ),
   vars = {
-    'k': VarInfo(bounds=(1.4, 1.6), integrable=False),
+    'k': VarInfo(bounds=(1, 2), integrable=False),
     'x': VarInfo(bounds=(0, 1), integrable=False),
   },
   conditions = [
-    (2, lambda s: s.y.subs(s.x, 1) - sp.exp(1.5))
+    (2, lambda s: s.y.subs(s.x, 1) - sp.exp(s.k))
   ],
   preoperations = [
     lambda k, x: 0,
@@ -30,6 +30,7 @@ config = Config(
   ],
   hyperparameters = Hyperparameters(
     lr = 0.003,
+    penalty = 2,
     cellcount = 4,
   ),
   epochs = 24,
