@@ -44,6 +44,8 @@ def run(config: Config):
 
     W = random.uniform(subkey, shape=(len(network.alphas),), minval=0, maxval=0.001)
 
+    loss_histories = []
+
     try:
         while not network.is_final:
             train_results = train(
@@ -55,6 +57,9 @@ def run(config: Config):
 
             W = train_results.W
             best = train_results.best
+            loss_history = train_results.loss_history
+
+            loss_histories += [loss_history]
 
             info('Pruning weights...')
             network.assign_weights(W)
@@ -65,4 +70,4 @@ def run(config: Config):
     y_prediction_best = best.model_y.subs(zip(best.alphas, best.W))
     d(y_prediction_best)
 
-    return network, best
+    return network, best, loss_histories

@@ -3,22 +3,22 @@ from util.interfaces import Config, EqInfo, Hyperparameters, VarInfo
 
 config = Config(
   eq = EqInfo(
-    name = 'y',
-    function = lambda s: s.dydx - s.k * s.y,
+    name = 'P',
+    function = lambda s: s.dPdt - s.r * s.P,
   ),
   vars = {
-    'k': VarInfo(bounds=(1, 2), integrable=False),
-    'x': VarInfo(bounds=(0, 1), integrable=False),
+    'r': VarInfo(bounds=(1, 2), integrable=False),
+    't': VarInfo(bounds=(0, 1), integrable=False),
   },
   conditions = [
-    (2, lambda s: s.y.subs(s.x, 1) - sp.exp(s.k))
+    (2, lambda s: s.P.subs(s.t, 1) - sp.exp(s.r))
   ],
   preoperations = [
-    lambda k, x: 0,
-    lambda k, x: 1,
-    lambda k, x: k,
-    lambda k, x: x,
-    lambda k, x: k * x
+    lambda r, t: 0,
+    lambda r, t: 1,
+    lambda r, t: r,
+    lambda r, t: t,
+    lambda r, t: r * t
   ],
   operations = [
     lambda z: 0,
