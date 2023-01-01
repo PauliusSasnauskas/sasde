@@ -8,7 +8,7 @@ config = Config(
   ),
   vars = {
     'r': VarInfo(bounds=(1, 2), integrable=False),
-    't': VarInfo(bounds=(0, 1), integrable=False),
+    't': VarInfo(bounds=(0, 1), integrable=True),
   },
   conditions = [
     (2, lambda s: s.P.subs(s.t, 1) - sp.exp(s.r))

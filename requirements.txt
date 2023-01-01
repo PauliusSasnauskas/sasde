@@ -1,3 +1,5 @@
-Sympy >= 1.9
-jax
-matplotlib
+sympy >= 1.11
+jax >= 0.4.1
+jaxlib >= 0.4.1
+jaxtyping >= 0.2
+matplotlib >= 3

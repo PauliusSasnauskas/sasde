@@ -9,6 +9,7 @@ from jaxtyping import Array
 from util.dotdict import DotDict
 from util.interfaces import EqInfo, VarInfo, Numeric, SymbolicNumeric
 from util.print import pad, info
+from signal import SIGALRM, signal, alarm
 
 setrecursionlimit(10000)
 
@@ -90,6 +91,11 @@ class Link:
 
             self.make_forward(float(np.sum(self.weights)))
 
+class TimeoutException(Exception):
+    pass
+
+def timeoutHandler(_, __):
+    raise TimeoutException("Out of time")
 
 class Network:
     symbols: dict[str, sp.Expr]
@@ -115,18 +121,13 @@ class Network:
     is_final: bool = False
 
     lambdify_modules = {
-        "exp": np.exp,
-        "sin": np.sin,
-        "cos": np.cos,
         "Min": np.minimum,
         "Max": np.maximum,
         "fmin": np.minimum,
         "fmax": np.maximum,
         "min": np.minimum,
         "max": np.maximum,
-        "log": np.log,
-        "Abs": np.abs,
-        "abs": np.abs
+        "PINF": np.inf
     }
 
     def __init__(self,
@@ -185,7 +186,7 @@ class Network:
                 else:
                     partial_results[to] += [link.forward(sum(partial_results[fr]))]
                 self.alphas += link.alphas
-                self.weights += link.weights
+                self.weights += list(link.weights)
                 self.penalties += link.penalty
 
         self.penalties += sum(self.fmax(-alpha, 0.0) for alpha in self.alphas) # pylint: disable=not-callable
@@ -203,7 +204,7 @@ class Network:
         loss_lambdified = sp.lambdify(
             [self.alphas, *self.symbols_input],
             loss_integrated,
-            modules=self.lambdify_modules,
+            modules=[self.lambdify_modules, 'jax'],
             cse=True
         )
 
@@ -223,18 +224,23 @@ class Network:
         loss_model = self.run_dif_replacements(loss_model, model_y)
 
         operating_var = self.variables[self.operating_var]
-        # TODO: race condition w/ timer?
-        if operating_var.integrable:
-            # print('loss_model', loss_model)
-            # print('operating_var', (self.operating_var, *operating_var.bounds))
-            result = sp.integrate(loss_model, (self.operating_var, *operating_var.bounds))
-            if isinstance(result, sp.Integral):
-                info(f'Cannot integrate model w.r.t. {self.operating_var}')
-            else:
-                loss_model = result
-                if self.verbose >= 1:
-                    info('Integrated')
 
+        if operating_var.integrable:
+            signal(SIGALRM, timeoutHandler)
+            alarm(10)
+            try:
+                info(f'Trying to integrate w.r.t. {self.operating_var}')
+                result = sp.integrate(loss_model, (self.operating_var, *operating_var.bounds))
+                if isinstance(result, sp.Integral):
+                    info(f'SymPy failed to integrate model w.r.t. {self.operating_var}')
+                else:
+                    loss_model = result
+                    self.debug.integrated = True
+                    if self.verbose >= 1:
+                        info('Integrated')
+            except TimeoutException:
+                info(f'Out of time when integrating w.r.t. {self.operating_var}')
+        self.next_operating_var()
         return loss_model
 
 
@@ -301,7 +307,7 @@ class Network:
         return self.get_model()
 
     def next_operating_var(self):
-        next_var_index = list(self.variables.keys()).index(self.operating_var)
+        next_var_index = 1 + list(self.variables.keys()).index(self.operating_var)
         if next_var_index >= len(self.variables):
             next_var_index = 0
         self.operating_var = list(self.variables.keys())[next_var_index]
