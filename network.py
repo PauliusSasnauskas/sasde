@@ -240,6 +240,8 @@ class Network:
                         info('Integrated')
             except TimeoutException:
                 info(f'Out of time when integrating w.r.t. {self.operating_var}')
+            finally:
+                alarm(0)
         self.next_operating_var()
         return loss_model
 

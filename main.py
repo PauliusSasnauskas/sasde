@@ -34,7 +34,7 @@ def run(config: Config):
 
     network.get_model()
 
-    key = random.PRNGKey(2)
+    key = random.PRNGKey(config.seed)
     key, subkey = random.split(key)
 
     if network.is_final:

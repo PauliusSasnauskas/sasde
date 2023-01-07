@@ -62,17 +62,22 @@ def train(
 
         for batch in zip(*batches.values()): # minibatches
             loss, grad = network.loss_and_grad(W, *batch)
+
+            nan_locs = np.isnan(grad)
+            grad = grad.at[nan_locs].set(0)
+
+            if config.gradclip:
+                grad = np.clip(grad, -1, 1)
+
             grad_avg = np.average(grad, axis=0)
             loss_avg = np.average(loss)
 
-            grad = grad.at[np.isnan(grad)].set(0)
-
-            grad = np.clip(grad, -0.5, 0.5)
-
-            if np.any(np.isnan(loss)) or np.any(np.isnan(grad)):
-                # continue
-                info('Loss is nan, stopping...')
+            if np.any(nan_locs):
+                info('Gradients are nan, mitigating...')
+                W.at[np.isnan(grad_avg)].set(0)
                 break
+            if np.any(np.isnan(loss)):
+                info('Loss is nan...')
 
             W -= config.hyperparameters.lr * grad_avg
             loss_epoch += [loss_avg]
