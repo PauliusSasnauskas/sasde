@@ -48,10 +48,11 @@ def run(config: Config):
 
     try:
         while not network.is_final:
+            key, subkey = random.split(key)
             train_results = train(
                 network,
                 config = config,
-                key = key,
+                key = subkey,
                 W_init = W
             )
 
@@ -67,7 +68,8 @@ def run(config: Config):
     except KeyboardInterrupt:
         info("Stopping...")
 
-    y_prediction_best = best.model_y.subs(zip(best.alphas, best.W))
-    d(y_prediction_best)
+    prediction_best = best.model_y.subs(zip(best.alphas, best.W))
+    d(prediction_best)
+    print(f"Best loss: {float(best.loss)}")
 
     return network, best, loss_histories

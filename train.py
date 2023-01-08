@@ -48,8 +48,16 @@ def train(
         info(f"W₀ = {a(W)}")
 
     # plotting.init(W)
-    
-    optimizer = optax.adam(config.hyperparameters.lr)
+
+    # optimizer = optax.adam(config.hyperparameters.lr)
+    linear_decay_schedule = optax.linear_schedule(init_value=config.hyperparameters.lr, end_value=config.hyperparameters.lr * 0.1, transition_steps=1000)
+    optimizer = optax.chain(
+        optax.clip_by_global_norm(1.),
+        optax.scale_by_adam(),
+        optax.scale_by_schedule(linear_decay_schedule),
+        optax.scale(-1.0)
+    )
+
     opt_state = optimizer.init(W)
 
     # train loop
@@ -67,26 +75,23 @@ def train(
         for batch in zip(*batches.values()): # minibatches
             loss, grad = network.loss_and_grad(W, *batch)
 
-            # nan_locs = np.isnan(grad)
-            # grad = grad.at[nan_locs].set(0)
-
-            # if config.gradclip:
-            #     grad = np.clip(grad, -1, 1)
+            nan_locs = np.isnan(grad)
+            grad = grad.at[nan_locs].set(0)
 
             grad_avg = np.average(grad, axis=0)
             loss_avg = np.average(loss)
 
+            if np.any(nan_locs):
+                info('Gradients are nan, mitigating...')
+                W.at[np.isnan(grad_avg)].set(0)
+                break
+
             updates, opt_state = optimizer.update(grad_avg, opt_state)
             W = optax.apply_updates(W, updates)
 
-            # if np.any(nan_locs):
-            #     info('Gradients are nan, mitigating...')
-            #     W.at[np.isnan(grad_avg)].set(0)
-            #     break
             # if np.any(np.isnan(loss)):
             #     info('Loss is nan...')
 
-            # W -= config.hyperparameters.lr * grad_avg
             loss_epoch += [loss_avg]
 
             if loss_avg < best.loss:
@@ -111,7 +116,7 @@ def train(
                 config.epochs < 100 or \
                 (config.epochs >= 100 and config.epochs < 500 and epoch % 10 == 9) or \
                 (config.epochs >= 500 and epoch % 100 == 99):
-                info(f"Epoch: {epoch+1}, Loss: {np.mean(np.array(loss_epoch))}") #,\tW = {a(W)}")
+                info(f"Epoch: {epoch+1}, Loss: {np.mean(np.array(loss_epoch)):.10f}") #,\tW = {a(W)}")
 
         loss_history += [loss_epoch]
         # plotting.after_epoch(W, epoch, np.mean(np.array(loss_epoch)), show_plot=(epoch == epochs-1))

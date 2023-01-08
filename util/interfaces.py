@@ -34,5 +34,4 @@ class Config:
     epochs: int
     batchsize: int
     verbosity: int
-    gradclip: bool = False
     seed: int = 2
