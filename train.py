@@ -3,6 +3,7 @@ from typing import Sequence
 from jax import random
 import jax.numpy as np
 from jaxtyping import Array
+import optax
 import sympy as sp
 from network import Network
 from util.dataset import shuffle, batch_dataset, gen_dataset
@@ -47,6 +48,9 @@ def train(
         info(f"W₀ = {a(W)}")
 
     # plotting.init(W)
+    
+    optimizer = optax.adam(config.hyperparameters.lr)
+    opt_state = optimizer.init(W)
 
     # train loop
     for epoch in range(config.epochs): # epochs
@@ -63,23 +67,26 @@ def train(
         for batch in zip(*batches.values()): # minibatches
             loss, grad = network.loss_and_grad(W, *batch)
 
-            nan_locs = np.isnan(grad)
-            grad = grad.at[nan_locs].set(0)
+            # nan_locs = np.isnan(grad)
+            # grad = grad.at[nan_locs].set(0)
 
-            if config.gradclip:
-                grad = np.clip(grad, -1, 1)
+            # if config.gradclip:
+            #     grad = np.clip(grad, -1, 1)
 
             grad_avg = np.average(grad, axis=0)
             loss_avg = np.average(loss)
 
-            if np.any(nan_locs):
-                info('Gradients are nan, mitigating...')
-                W.at[np.isnan(grad_avg)].set(0)
-                break
-            if np.any(np.isnan(loss)):
-                info('Loss is nan...')
+            updates, opt_state = optimizer.update(grad_avg, opt_state)
+            W = optax.apply_updates(W, updates)
 
-            W -= config.hyperparameters.lr * grad_avg
+            # if np.any(nan_locs):
+            #     info('Gradients are nan, mitigating...')
+            #     W.at[np.isnan(grad_avg)].set(0)
+            #     break
+            # if np.any(np.isnan(loss)):
+            #     info('Loss is nan...')
+
+            # W -= config.hyperparameters.lr * grad_avg
             loss_epoch += [loss_avg]
 
             if loss_avg < best.loss:
