@@ -32,6 +32,7 @@ class Config:
     operations: Sequence[Callable[[SymbolicNumeric], SymbolicNumeric]]
     hyperparameters: Hyperparameters
     epochs: int
+    samples: int
     batchsize: int
     verbosity: int
     seed: int = 2

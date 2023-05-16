@@ -42,7 +42,7 @@ def train(
     input_datasets = DotDict()
     for varname, varinfo in config.vars.items():
         key, subkey = random.split(key)
-        input_datasets[varname] = gen_dataset(subkey, varinfo.bounds, size=512)
+        input_datasets[varname] = gen_dataset(subkey, varinfo.bounds, size=config.samples)
 
     if config.verbosity >= 2:
         info(f"W₀ = {a(W)}")

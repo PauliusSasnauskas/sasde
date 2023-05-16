@@ -11,7 +11,7 @@ from util.interfaces import EqInfo, VarInfo, Numeric, SymbolicNumeric
 from util.print import pad, info
 from signal import SIGALRM, signal, alarm
 
-setrecursionlimit(10000)
+setrecursionlimit(10000) # for SymPy
 
 class PruneStrategy(Enum):
     ALL = 0
