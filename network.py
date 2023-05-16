@@ -208,7 +208,7 @@ class Network:
             cse=True
         )
 
-        self.debug['loss_lambdified'] = loss_lambdified
+        self.debug['loss_lambdified'] = lambda alphas, *inputs: loss_lambdified(alphas, *inputs)[0]
 
         # JAXify function
         loss_and_grad = jit(vmap(value_and_grad(loss_lambdified, reduce_axes=("batch",)), (None, *(0 for _ in self.symbols_input))))

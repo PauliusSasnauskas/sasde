@@ -68,7 +68,7 @@ def run(config: Config):
     except KeyboardInterrupt:
         info("Stopping...")
 
-    prediction_best = best.model_y.subs(zip(best.alphas, best.W))
+    prediction_best = best.model.subs(zip(best.alphas, best.W))
     d(prediction_best)
     print(f"Best loss: {float(best.loss)}")
 

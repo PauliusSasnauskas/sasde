@@ -14,7 +14,7 @@ from util.print import a, info
 @dataclass
 class BestResult:
     loss: Numeric
-    model_y: sp.Expr
+    model: sp.Expr
     alphas: Sequence[sp.Expr]
     W: Array
 
@@ -37,7 +37,7 @@ def train(
 
     W = W_init
 
-    best = BestResult(loss = np.inf, model_y = network.model_y, alphas = network.alphas, W = W)
+    best = BestResult(loss = np.inf, model = network.model_y, alphas = network.alphas, W = W)
 
     input_datasets = DotDict()
     for varname, varinfo in config.vars.items():
@@ -96,7 +96,7 @@ def train(
 
             if loss_avg < best.loss:
                 best.loss = loss_avg
-                best.model_y = network.model_y
+                best.model = network.model_y
                 best.alphas = network.alphas
                 best.W = np.array(W)
                 if config.verbosity >= 3:
