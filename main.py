@@ -24,7 +24,7 @@ def run(config: Config):
         exprs_d,
         config.preoperations,
         config.operations,
-        config.hyperparameters.cellcount,
+        config.hyperparameters.nodecount,
         config.eq,
         config.vars,
         config.conditions,
@@ -46,6 +46,9 @@ def run(config: Config):
 
     loss_histories = []
 
+    pruneiter = 1
+    prunemax = (len(config.preoperations)-1)*(config.hyperparameters.nodecount-1) + (len(config.operations)-1)*sp.binomial(config.hyperparameters.nodecount - 1, 2)
+
     try:
         while not network.is_final:
             key, subkey = random.split(key)
@@ -62,7 +65,9 @@ def run(config: Config):
 
             loss_histories += [loss_history]
 
-            info('Pruning weights...')
+            if pruneiter != prunemax: info(f'Pruning weights ({pruneiter} / {prunemax})')
+            pruneiter += 1
+
             network.assign_weights(W)
             W, _, _ = network.prune_auto()
     except KeyboardInterrupt:

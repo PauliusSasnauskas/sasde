@@ -39,11 +39,6 @@ def train(
 
     best = BestResult(loss = np.inf, model = network.model_y, alphas = network.alphas, W = W)
 
-    input_datasets = DotDict()
-    for varname, varinfo in config.vars.items():
-        key, subkey = random.split(key)
-        input_datasets[varname] = gen_dataset(subkey, varinfo.bounds, size=config.samples)
-
     if config.verbosity >= 2:
         info(f"W₀ = {a(W)}")
 
@@ -65,11 +60,10 @@ def train(
         loss_epoch = []
         batches = DotDict()
 
+        input_datasets = DotDict()
         for varname, varinfo in config.vars.items():
             key, subkey = random.split(key)
-            input_datasets[varname] = shuffle(subkey, input_datasets[varname])
-
-            key, subkey = random.split(key)
+            input_datasets[varname] = gen_dataset(subkey, varinfo.bounds, size=config.samples)
             batches[varname] = batch_dataset(input_datasets[varname], config.batchsize)
 
         for batch in zip(*batches.values()): # minibatches

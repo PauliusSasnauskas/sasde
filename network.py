@@ -26,16 +26,19 @@ class Link:
     weights: Array
     forward: Callable[..., SymbolicNumeric]
     penalty: sp.Expr
+    all_symbols: dict[str, sp.Expr]
 
     def __init__(self,
         operations: Callable[..., SymbolicNumeric],
         fr: int,
         to: int,
-        parameter_count: int = 1,
+        param_count: int = 1,
+        all_symbols: dict[str, sp.Expr] = {},
         prune_strategy: PruneStrategy = PruneStrategy.SINGLE
     ):
-        self.inputs = sp.symbols([f'input{i}_{fr}__{to}' for i in range(parameter_count)])
+        self.inputs = sp.symbols([f'input{i}_{fr}__{to}' for i in range(param_count)])
         self.operations = operations
+        self.all_symbols = all_symbols
         self.prune_strategy = prune_strategy
 
         # self.alphas = sp.symbols(' '.join(['\\alpha_{' + f'o_{i}' + '}^{' + f'({fr}\,{to})' + '}' for i in range(len(self.operations))]))
@@ -47,11 +50,10 @@ class Link:
 
     def make_forward(self, override_penalty_target: Numeric = 1):
         all_sum = sum([
-            alpha * operation(*self.inputs)
+            alpha * operation(*self.inputs) if len(self.inputs) != 1 else alpha * operation(*self.inputs, self.all_symbols)
             for alpha, operation in zip(self.alphas, self.operations)
         ])
         self.forward = lambda *inputs: all_sum.subs(zip(self.inputs, inputs))
-
         if self.is_pruned:
             self.penalty = 0
         else:
@@ -167,9 +169,9 @@ class Network:
             self.links[fr] = {}
             for to in range(fr+1, node_count):
                 if fr == 0:
-                    self.links[fr][to] = Link(preoperations[::], fr, to, len(symbols_input))
+                    self.links[fr][to] = Link(preoperations[::], fr, to, param_count=len(symbols_input))
                 else:
-                    self.links[fr][to] = Link(operations[::], fr, to)
+                    self.links[fr][to] = Link(operations[::], fr, to, all_symbols=symbols)
 
     def __get_symbolic_model(self):
         self.weights = []

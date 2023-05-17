@@ -11,10 +11,24 @@ def isList(val, valname):
     if not isinstance(val, list):
         raise KeyError(f'{valname} is not a list')
 
-def isListOfSomething(isSomething, val, valname):
+def isListOfType(isType, val, valname):
     isList(val, valname)
     for index, item in enumerate(val):
-        isSomething(item, f'{valname}[{index}]')
+        isType(item, f'{valname}[{index}]')
+
+def isStrDictOfType(isType, val, valname):
+    isNotEmpty(val, valname)
+    if not isinstance(val, dict):
+        raise KeyError(f'{valname} is not a dict')
+    if not all([isinstance(k, str) for k in val.keys()]):
+        raise KeyError(f'{valname} keys are not strings')
+    for key in val:
+        isType(val[key], f'{valname}[{key}]')
+
+def isNumeric(val, valname):
+    isNotEmpty(val, valname)
+    if not isinstance(val, float) and not isinstance(val, int):
+        raise KeyError(f'{valname} is not a number')
 
 def isFloat(val, valname):
     isNotEmpty(val, valname)
@@ -26,24 +40,20 @@ def isInteger(val, valname):
     if not isinstance(val, int):
         raise KeyError(f'{valname} is not an int')
 
-def isString(val, valname):
+def isString(val, valname, optional=False):
+    if val is None and optional:
+        return
     isNotEmpty(val, valname)
     if not isinstance(val, str):
         raise KeyError(f'{valname} is not a string')
 
 def isStringList(val, valname):
-    isListOfSomething(isString, val, valname)
+    isListOfType(isString, val, valname)
 
-def isFloatList(val, valname):
-    isListOfSomething(isFloat, val, valname)
-
-def isFloatPair(val, valname):
+def isNumericPair(val, valname):
     isNotEmpty(val, valname)
-    if not isinstance(val, tuple) or len(val) != 2:
-        raise KeyError(f'{valname} is not a pair of floats (tuple of two floats)')
-
-def isFloatPairList(val, valname):
-    isListOfSomething(isFloatPair, val, valname)
+    isNumeric(val[0], f'{valname}[0]')
+    isNumeric(val[1], f'{valname}[1]')
 
 def isSympyExpr(val, valname):
     isNotEmpty(val, valname)
@@ -51,7 +61,7 @@ def isSympyExpr(val, valname):
         raise KeyError(f'{valname} is not a SymPy Expr')
 
 def isSympyExprList(val, valname):
-    isListOfSomething(isSympyExpr, val, valname)
+    isListOfType(isSympyExpr, val, valname)
 
 def isFunc(val, valname):
     isNotEmpty(val, valname)
@@ -59,25 +69,40 @@ def isFunc(val, valname):
         raise KeyError(f'{valname} is not a function')
 
 def isFuncList(val, valname):
-    isListOfSomething(isFunc, val, valname)
+    isListOfType(isFunc, val, valname)
+
+def isNumFunc(val, valname):
+    isNotEmpty(val, valname)
+    isNumeric(val[0], f'{valname}[0]')
+    isFunc(val[1], f'{valname}[1]')
+
+def isBool(val, valname):
+    isNotEmpty(val, valname)
+    if not isinstance(val, bool):
+        raise KeyError(f'{valname} is not a bool')
+
+def isVarInfo(val, valname):
+    isNotEmpty(val, valname)
+    isNumericPair(val.bounds, f'{valname}.bounds')
+    isBool(val.integrable, f'{valname}.bool')
+    isString(val.symbol, f'{valname}.symbol', optional=True)
 
 def validateConfig(config: Config):
-    # TODO: fix
-    pass
-    # isFloatPairList(config, 'bounds')
-    # isFunc(config.eq, 'eq')
-    # isFuncList(config.conds, 'conds')
-    # isFuncList(config.operations, 'operations')
-    # isDict(config.hyperpars, 'hyperpars')
-    # isFloat(config.hyperpars.lr, 'hyperpars.lr')
-    # isInteger(config.hyperpars.cellcount, 'hyperpars.cellcount')
-    # isFloatList(config.hyperpars.conds, 'hyperpars.conds')
-    # isInteger(config.epochs, 'epochs')
-    # isInteger(config.batchsize, 'batchsize')
-    # isInteger(config.verbosity, 'verbosity')
+    isString(config.eq.name, 'eq.function')
+    isFunc(config.eq.function, 'eq.function')
 
-    # if len(config.names.vars) != len(config.bounds):
-    #     raise KeyError('names.vars length should match bounds length (each named variable must have a range)')
+    isStrDictOfType(isVarInfo, config.vars, 'vars')
 
-    # if len(config.conds) != len(config.hyperpars.conds):
-    #     raise KeyError('conds length should match hyperpars.conds length (each condition should have its hyperparameter)')
+    isListOfType(isNumFunc, config.conditions, 'conditions')
+    isFuncList(config.preoperations, 'preoperations')
+    isFuncList(config.operations, 'operations')
+
+    isFloat(config.hyperparameters.lr, 'hyperparameters.lr')
+    isNumeric(config.hyperparameters.penalty, 'hyperparameters.penalty')
+    isInteger(config.hyperparameters.nodecount, 'hyperparameters.nodecount')
+
+    isInteger(config.epochs, 'epochs')
+    isInteger(config.samples, 'samples')
+    isInteger(config.batchsize, 'batchsize')
+    isInteger(config.verbosity, 'verbosity')
+    isInteger(config.seed, 'seed')

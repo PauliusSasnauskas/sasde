@@ -14,14 +14,14 @@ class EqInfo:
 @dataclass
 class VarInfo:
     bounds: Tuple[Numeric, Numeric]
-    integrable: bool
+    integrable: bool = False
     symbol: str | None = None
 
 @dataclass
 class Hyperparameters:
     lr: Numeric
     penalty: Numeric
-    cellcount: int
+    nodecount: int
 
 @dataclass
 class Config:
