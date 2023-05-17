@@ -65,7 +65,7 @@ def run(config: Config):
 
             loss_histories += [loss_history]
 
-            if pruneiter != prunemax: info(f'Pruning weights ({pruneiter} / {prunemax})')
+            if pruneiter <= prunemax: info(f'Pruning weights ({pruneiter} / {prunemax})')
             pruneiter += 1
 
             network.assign_weights(W)
