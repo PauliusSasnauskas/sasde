@@ -1,6 +1,19 @@
 # Symbolic Neural Architecture Search for Differential Equations
 
-`eq1.ipynb`, `eq2.ipynb`, `eq3.ipynb` contain experiments produced for the paper.
+To reproduce experiments in the paper:
+```sh
+# Malthus model
+python run.py --experiment 1
+
+# Burgers' equation
+python run.py --experiment 2
+
+# Euler-Tricomi equation
+python run.py --experiment 3
+```
+
+`eq1.ipynb`, `eq2.ipynb`, `eq3.ipynb` contain notebooks using the architecture.
+`eq1.ipynb` has a more in-depth explanation of how to use this code.
 
 ## Requirements
 ```

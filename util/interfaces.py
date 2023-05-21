@@ -36,3 +36,6 @@ class Config:
     batchsize: int
     verbosity: int
     seed: int = 2
+
+    def getSymbolsIntegrals(self):
+        return [(symbol, *self.vars[symbol].bounds) for symbol in self.vars]
