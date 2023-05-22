@@ -1,8 +1,0 @@
-[MESSAGES CONTROL]
-disable=invalid-name,
-        missing-function-docstring,
-        missing-module-docstring,
-        missing-class-docstring,
-        line-too-long,
-        redefined-builtin,
-        attribute-defined-outside-init
