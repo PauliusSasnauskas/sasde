@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Sequence
 from jax import random
 import jax.numpy as np
+from jax.scipy.optimize import minimize as min_bfgs
 from jaxtyping import Array
 import optax
 import sympy as sp
@@ -104,6 +105,17 @@ def train(
             if config.verbosity >= 2:
                 info(f"\rΔWₛ = {a(-config.hyperparameters.lr * grad_avg)};\tℒₛ = {loss_avg:.6f};")
                 info(f"W  = {a(W)}", end="")
+        # elif config.optimizer == "bfgs":
+        #     def avg_loss(W):
+        #         total_loss = 0
+        #         for batch in zip(*batches.values()): # minibatches
+        #             loss = network.loss(W, *batch)
+        #             total_loss += loss
+        #         return total_loss / config.samples * config.batchsize
+        #     opt_result = min_bfgs(avg_loss, W, method="BFGS")
+        #     W = opt_result.x
+        #     info(f"ℒₛ = {opt_result.fun:.6f} (success: {opt_result.success}) ")
+        #     loss_epoch = opt_result.fun
 
         if config.verbosity >= 1:
             if epoch == 0 or epoch == config.epochs - 1 or \

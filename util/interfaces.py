@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Callable, Sequence, Tuple
+from typing import Callable, Sequence, Tuple, Literal
 from jaxtyping import Float
 import sympy as sp
 
@@ -36,6 +36,7 @@ class Config:
     batchsize: int
     verbosity: int
     seed: int = 2
+    derivative_order: int = 2
 
     def getSymbolsIntegrals(self):
         return [(symbol, *self.vars[symbol].bounds) for symbol in self.vars]

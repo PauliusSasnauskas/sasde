@@ -1,4 +1,4 @@
-# Symbolic Neural Architecture Search for Differential Equations
+# SASDE - Symbolic Architecture Search for Differential Equations
 
 To reproduce experiments in the paper:
 ```sh

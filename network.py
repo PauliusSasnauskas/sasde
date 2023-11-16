@@ -43,6 +43,9 @@ class Link:
 
         # self.alphas = sp.symbols(' '.join(['\\alpha_{' + f'o_{i}' + '}^{' + f'({fr}\,{to})' + '}' for i in range(len(self.operations))]))
         self.alphas = sp.symbols(' '.join([(f'a_o{i}__{pad(fr)}__{pad(to)}') for i in range(len(operations))]))
+        if len(operations) <= 1:
+            self.alphas = (self.alphas,)
+            self.is_pruned = True
 
         self.weights = np.zeros((len(self.operations),))
 
@@ -54,6 +57,8 @@ class Link:
             for alpha, operation in zip(self.alphas, self.operations)
         ])
         self.forward = lambda *inputs: all_sum.subs(zip(self.inputs, inputs))
+        if isinstance(all_sum, float) or isinstance(all_sum, int):
+            self.forward = lambda *_: all_sum
         if self.is_pruned:
             self.penalty = 0
         else:
@@ -88,7 +93,7 @@ class Link:
             self.operations = self.operations[:remove_index] + self.operations[remove_index + 1:]
             self.weights = np.delete(self.weights, remove_index)
 
-            if len(self.alphas) == 1:
+            if len(self.alphas) <= 1:
                 self.is_pruned = True
 
             self.make_forward(float(np.sum(self.weights)))
@@ -210,7 +215,7 @@ class Network:
             cse=True
         )
 
-        self.debug['loss_lambdified'] = lambda alphas, *inputs: loss_lambdified(alphas, *inputs)[0]
+        self.loss = lambda alphas, *inputs: loss_lambdified(alphas, *inputs)[0]
 
         # JAXify function
         loss_and_grad = jit(vmap(value_and_grad(loss_lambdified, reduce_axes=("batch",)), (None, *(0 for _ in self.symbols_input))))

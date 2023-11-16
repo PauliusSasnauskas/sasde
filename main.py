@@ -14,7 +14,7 @@ def run(config: Config):
     symbols = DotDict()
     for name in config.vars.keys():
         symbols[name] = sp.symbols(name)
-    symbols_d, exprs_d = make_derivatives(config.eq.name, config.vars.keys())
+    symbols_d, exprs_d = make_derivatives(config.eq.name, config.vars.keys(), config.derivative_order)
     symbols.update(symbols_d)
 
     # set up network by configuration
